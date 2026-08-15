@@ -1,6 +1,13 @@
 <!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Athlete Signal — Road to Sub 1:10</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1117">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Athlete Signal">
 <style>
 :root{--bg:#0d1117;--pan:#161c26;--pan2:#1d2531;--line:#2a3543;--ink:#e8edf3;--mut:#8a97a6;
 --acc:#3b82f6;--acc2:#f97316;--good:#22c55e;--warn:#eab308;--bad:#ef4444}
@@ -227,4 +234,6 @@ window.__hx=function(raw){ try{ D=adapt(raw); cfg=D.config; boot(); }catch(e){ b
   document.head.appendChild(s);
   setTimeout(function(){ var st=document.getElementById('status'); if(!st||!st.innerHTML) boot(); }, 7000);
 })();
-</script></body></html>
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
+</body></html>
