@@ -202,7 +202,7 @@ document.getElementById('engine').innerHTML=[
   panel('cha','Cadence + WB badge','Running economy · unbroken wall ball',bigspark(fdate(D.run,c).filter(function(r){return num(r.cad)!=null;}).map(function(r){return P(num(r.cad),num(r.cad)+' spm',r.date);}),false,'Running cadence (steps/min) — goal 170+.')+'<div class="axis"><span>→ '+cfg.goals.cad+'+ spm</span></div><div class="prog" style="margin-top:8px"><div class="t"><span>Wall ball PR</span><b>'+cfg.goals.wb_pr+' / '+cfg.goals.wb+'</b></div><div class="trk blue"><span style="width:'+(cfg.goals.wb_pr/cfg.goals.wb*100)+'%"></span></div></div>')
  ].join('');
  var recF=fdate(D.rec,cut(14)), rh=recF.filter(function(r){return num(r.rhr)!=null;}).map(function(r){return P(num(r.rhr),num(r.rhr)+' bpm',r.date);}), sl=recF.filter(function(r){return num(r.sleep)!=null;}).map(function(r){return P(num(r.sleep),num(r.sleep)+' h',r.date);});
- var wtF=fdate(D.weight,cut(14)).filter(function(x){return num(x.kg)!=null;}).map(function(x){return P(num(x.kg),num(x.kg)+' kg',x.date);});
+ var wtF=fdate(D.weight,null).filter(function(x){return num(x.kg)!=null;}).map(function(x){return P(num(x.kg),num(x.kg)+' kg',x.date);});
  var slAvg=sl.map(function(o){return o.v;});slAvg=slAvg.length?(slAvg.reduce(function(a,b){return a+b;},0)/slAvg.length).toFixed(1):'—';
  document.getElementById('body').innerHTML=[panel('','Resting HR','Vs baseline '+cfg.rhr_base+' · 14d',bigspark(rh,true,'Resting heart rate — a rise above baseline flags fatigue.')),panel('','Sleep','Avg '+slAvg+'h · 14d',bigspark(sl,false,'Sleep hours per night.')),panel('','Weight','Trend vs max-tests',wtF.length?bigspark(wtF,false,'Body weight — read as a trend against test progress.'):'<div class="na">Start logging (weekly)</div>')].join('');
 }
