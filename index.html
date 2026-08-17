@@ -175,7 +175,7 @@ document.getElementById('status').innerHTML=[
 ['Next test',ntVal,ntSub,'Lens 2 — calibrated max tests on deload weeks are the low-noise trend to trust.','ntest']
 ].map(function(s){return '<div class="card '+s[4]+'" data-desc="'+s[3]+'"><div class="k">'+s[0]+'</div><div class="v">'+s[1]+'</div>'+(s[2]?'<div class="sub2">'+s[2]+'</div>':'')+'</div>';}).join('');
 var _src=document.getElementById('src');
-if(_src){_src.innerHTML='<span style="color:'+(LIVE?'var(--good)':'var(--warn)')+';font-weight:700">●</span> '+(LIVE?'Live from the logbook':'Snapshot · '+SNAP+' — open in incognito for live');}
+if(_src){_src.innerHTML=LIVE?'Where am I today':'<span style="color:var(--warn)">●</span> Data as of '+SNAP.slice(5).replace('-',' / ');}
 document.getElementById('wtype').textContent='Week type: '+(ph?(/test/.test(ph[3])?'Deload + tests — no threshold, no heavy stations':/Deload/.test(ph[3])?'Deload — no key sessions, recovery only':/Taper/.test(ph[3])?'Taper — short race-pace touches only':'Build — 5 key sessions')+'':'—')+'. Matched by content, not by day.';
 document.getElementById('lamps').innerHTML=(ph&&/Deload|Taper/.test(ph[3]))?'<span style="font-size:11px;color:var(--mut)">No key sessions this week — the five lamps return in build.</span>':Object.keys(done).map(function(k){return '<div class="lamp"><div class="lc '+(done[k]?'on':'')+'">'+(done[k]?'✓':'○')+'</div>'+k+'</div>';}).join('');
 var z2c=D.bike.filter(function(b){return b.date&&iso(pd(b.date))===wk;}).length+D.run.filter(function(r){return r.date&&iso(pd(r.date))===wk&&/Z/.test(String(r.zone||''));}).length;
