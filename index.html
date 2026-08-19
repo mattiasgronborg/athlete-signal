@@ -118,8 +118,8 @@ function adapt(raw){
   var A=function(t){return raw[t]||[];};
   return {
     run:  A('Running').map(function(o){return {date:o['Date'],dist:o['Distance (km)'],time:o['Time (min)'],cad:o['Cadence (spm)'],zone:o['Zone'],hr:o['Avg HR (bpm)'],split:o['Zone split']};}),
-    bike: A('Bike').map(function(o){return {date:o['Date'],time:o['Time (min)'],dist:o['Distance (km)'],bpm:o['Avg HR'],watt:o['Avg watt'],zone:o['Zone'],type:o['Type'],split:o['Zone split']};}),
-    thr:  A('Threshold').map(function(o){return {date:o['Date'],type:o['Type'],ints:o['Intervals'],len:o['Length (min/int)'],meters:o['Total meters'],pace:o['Avg /500m'],pacekm:o['Pace /km'],watt:o['Avg watt'],bpm:o['Avg HR'],split:o['Zone split']};}),
+    bike: A('Bike').map(function(o){return {date:o['Date'],time:o['Time (min)'],dist:o['Distance (km)'],bpm:o['Avg HR'],watt:o['Avg watt'],zone:o['Zone'],type:o['Type'],split:o['Zone split'],damper:o['Damper'],drag:o['Drag factor']};}),
+    thr:  A('Threshold').map(function(o){return {date:o['Date'],type:o['Type'],ints:o['Intervals'],len:o['Length (min/int)'],meters:o['Total meters'],pace:o['Avg /500m'],pacekm:o['Pace /km'],watt:o['Avg watt'],bpm:o['Avg HR'],split:o['Zone split'],damper:o['Damper'],drag:o['Drag factor']};}),
     str:  A('Strength').map(function(o){return {date:o['Date'],dl:o['Deadlift (kg)'],dlr:o['DL reps'],fs:o['Front squat (kg)'],fsr:o['FS reps'],pr:o['Strict press (kg)'],prr:o['SP reps'],bg:o['Bulgarian (kg/h)'],bgr:o['BS reps/leg'],bl:o['Back lunge (kg/h)'],blr:o['BL reps/leg']};}),
     hyrox:A('Hyrox').map(function(o){return {date:o['Date'],push:o['Sled push (kg)'],lunge:o['Lunges (kg)'],pull:o['Sled pull (kg)'],farm:o['Farmers (kg/hand)'],vest:o['Vest (kg)'],len:o['Session length (min)'],split:o['Zone split'],wb:o['Wall balls (kg)'],bur:o['Burpee broad jump (m)'],rounds:o['Rounds (B1·B2·B3)'],wbr:o['WB reps/round']};}),
     ron:  A('Roncevic').map(function(o){return {date:o['Date'],wave:o['Wave'],wb:o['WB weight (kg)'],v1:o['Round 1 (s)'],v2:o['Round 2 (s)'],v3:o['Round 3 (s)'],v4:o['Round 4 (s)'],badge:o['Badge WB'],split:o['Zone split']};}),
@@ -127,7 +127,7 @@ function adapt(raw){
     weight:A('Weight').map(function(o){return {date:o['Date'],kg:o['Weight (kg)']};}),
     grip: A('Grip').map(function(o){return {date:o['Date'],r:o['Right (kg)'],l:o['Left (kg)']};}),
     lifelab:A('LifeLab').map(function(o){return {date:o['Test date'],comment:o['Comment'],l10:o['10km/h Lactate'],p10:o['10km/h HR'],l11:o['11km/h Lactate'],p11:o['11km/h HR'],l12:o['12km/h Lactate'],p12:o['12km/h HR'],l13:o['13km/h Lactate'],p13:o['13km/h HR']};}),
-    test: A('Tests').map(function(o){return {date:o['Date'],phase:o['Phase (deload)'],test:o['Test'],result:o['Result'],unit:o['Unit'],hr:o['Avg HR (bpm)'],vo2:o['VO2max']};}),
+    test: A('Tests').map(function(o){return {date:o['Date'],phase:o['Phase (deload)'],test:o['Test'],result:o['Result'],unit:o['Unit'],hr:o['Avg HR (bpm)'],vo2:o['VO2max'],damper:o['Damper'],drag:o['Drag factor']};}),
     vo2: A('VO2').map(function(o){return {date:o['Date'],structure:o['Structure'],pace:o['Interval pace /km'],dist:o['Total distance (km)'],time:o['Total time (min)'],hr:o['Avg HR'],split:o['Zone split']};}),
     config: CONFIG
   };
@@ -259,6 +259,24 @@ var _zm=zoneMins(c);var _zt=_zm.reduce(function(a,b){return a+b;},0)||1;var _z24
 document.getElementById('engine').innerHTML=[
   (function(){var cw=iso(now);var comp=vkk.filter(function(k){return k<cw;});var lastC=comp.length?vv[comp[comp.length-1]]:null;var sofar=vv[cw]!=null?vv[cw]:0;
    return mpanel('eng','Weekly run volume','Completed weeks · target '+cfg.goals.volume+' km',(lastC!=null?lastC.toFixed(1)+' km':'—'),chipGoal(lastC,cfg.goals.volume,true),null,null,barsvg(comp.map(function(k){return P(+vv[k].toFixed(1),vv[k].toFixed(1)+' km',k);}),'Weekly running distance — completed weeks only.')+'<div class="axis"><span>this wk so far: '+sofar.toFixed(1)+' km</span><span>ramp ≤ +15%/wk</span></div>','Weekly running distance — completed weeks only; the running week is shown separately so mid-week never reads as a drop.');})(),
+  (function(){var cw=iso(now);
+   var bv={},bmiss={};
+   fdate(D.bike,c).forEach(function(b){if(!b.date)return;var k=iso(pd(b.date));var d=num(b.dist);
+     if(d!=null&&d>0){bv[k]=(bv[k]||0)+d*1000;}else{bmiss[k]=(bmiss[k]||0)+1;}});
+   var bkk=Object.keys(bv).sort();
+   var si=-1;for(var _i=0;_i<bkk.length;_i++){if(!bmiss[bkk[_i]]){si=_i;break;}}
+   var bks=si<0?[]:bkk.slice(si);
+   var bcomp=bks.filter(function(k){return k<cw;});
+   var lastM=bcomp.length?bv[bcomp[bcomp.length-1]]:null;
+   var prevM=bcomp.length>1?bv[bcomp[bcomp.length-2]]:null;
+   var pctM=(lastM!=null&&prevM)?Math.round((lastM/prevM-1)*100):null;
+   var sofarM=bv[cw]!=null?bv[cw]:0;
+   var gaps=bcomp.reduce(function(a,k){return a+(bmiss[k]||0);},0);
+   var chipM=pctM==null?null:(wkIsDL(bcomp[bcomp.length-1])?{cls:'acc',txt:'deload wk'}:{cls:(pctM>=0?'good':'warn'),txt:(pctM>=0?'+':'')+pctM+'% wk/wk'});
+   return mpanel('eng','Weekly bike volume','BikeErg metres · completed weeks',(lastM!=null?fmtN(Math.round(lastM))+'<small> m</small>':'—'),chipM,null,null,
+    barsvg(bcomp.map(function(k){return P(Math.round(bv[k]),fmtN(Math.round(bv[k]))+' m',k);}),'Weekly BikeErg metres — completed weeks only.')
+    +'<div class="axis"><span>this wk so far: '+fmtN(Math.round(sofarM))+' m</span><span>'+(gaps?gaps+(gaps>1?' sessions':' session')+' without distance':'series from '+String(bks[0]||'').slice(5))+'</span></div>',
+    'Weekly BikeErg distance in metres — completed weeks only. The series starts at the first week where every logged bike session had a distance; earlier indoor-cycle sessions logged time only and would read as false zeros.');})(),
   (function(){var cw=iso(now);var abkC=abk.filter(function(k){return k<cw;});var lastB=abkC.length?abase[abkC[abkC.length-1]]:null;var prevB2=abkC.length>1?abase[abkC[abkC.length-2]]:null;var pct=(lastB!=null&&prevB2)?Math.round((lastB/prevB2-1)*100):null;var sofarB=abase[cw]||0;
    return mpanel('eng','Aerobic base','Run + bike easy · completed weeks',(lastB!=null?(lastB/60).toFixed(1)+' h':'—'),(pct!=null?(wkIsDL(abkC[abkC.length-1])?{cls:'acc',txt:'deload wk'}:((pct>=-10&&pct<=15)?{cls:'good',txt:(pct>=0?'+':'')+pct+'% wk/wk'}:{cls:'warn',txt:(pct>=0?'+':'')+pct+'% wk/wk'})):null),null,null,bspark(abkC.map(function(k){return P(+(abase[k]/60).toFixed(2),(abase[k]/60).toFixed(1)+' h',k);}),null)+'<div class="axis"><span>this wk so far: '+(sofarB/60).toFixed(1)+' h</span><span>easy share '+allInt.pe+'%</span></div>','Weekly easy volume, run + bike — completed weeks only.');})(),
   mpanel('eng','Run cadence','Running economy · goal '+cfg.goals.cad+'+ spm',((last(cadS)||{}).v!=null?(last(cadS)||{}).v+' spm':'—'),chipGoal((last(cadS)||{}).v,cfg.goals.cad,true),cadS,cfg.goals.cad,null,'Running cadence in steps/min — shorter steps, better economy. Goal 170+.'),
