@@ -92,6 +92,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <div class="quote" id="quote"></div>
 <div class="foot" id="foot"></div></div><div id="tt"></div>
 <script>
+var BUILD="2.3 · 2026-08-19 · bike-volume+drag";
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
 function num(v){if(v==null||v==='')return null;return typeof v==='number'?v:parseFloat(String(v).replace(',','.'));}
 function pd(s){return new Date(s+'T00:00:00');}
@@ -354,7 +355,7 @@ var doy=Math.floor((now-new Date(now.getFullYear(),0,0))/DAY);
 document.getElementById('quote').innerHTML=QUOTES[doy%QUOTES.length]+'<span>Sun Tzu · The Art of War</span>';
 renderTrends(0);
 (function(){var tt=document.getElementById('tt');function pos(x,y){tt.style.display='block';tt.style.left=Math.min(x+12,window.innerWidth-160)+'px';tt.style.top=(y+14)+'px';}function render(el){var d=el.getAttribute('data-desc');if(el.classList&&el.classList.contains('pt')){return (d?'<span style="opacity:.7;font-size:10px">'+d+'</span><br>':'')+'<b>'+(el.getAttribute('data-d')||'')+'</b>'+(el.getAttribute('data-t')?'<br><span style="opacity:.55">'+el.getAttribute('data-t')+'</span>':'');}return '<span style="font-size:11px">'+(d||'')+'</span>';}function find(t){return t&&t.closest?(t.closest('.pt')||t.closest('[data-desc]')):null;}document.addEventListener('mousemove',function(e){var el=find(e.target);if(el){tt.innerHTML=render(el);pos(e.clientX,e.clientY);}else tt.style.display='none';});document.addEventListener('touchstart',function(e){var el=find(e.target);if(el&&e.touches[0]){tt.innerHTML=render(el);pos(e.touches[0].clientX,e.touches[0].clientY-46);setTimeout(function(){tt.style.display='none';},1800);}},{passive:true});})();
-document.getElementById('foot').innerHTML='<b>Athlete Signal</b> ⚡ · Live from the training logbook — written with sweat and pain.';
+document.getElementById('foot').innerHTML='<b>Athlete Signal</b> ⚡ · Live from the training logbook — written with sweat and pain.<br><span style="opacity:.55;font-size:9px">build '+BUILD+'</span>';
 
 }
 
@@ -370,7 +371,7 @@ function _gate(msg){
       +'<div style="font-size:15px;font-weight:800">Athlete Signal <span style="color:var(--acc)">⚡</span></div>'
       +'<div id="gmsg" style="font-size:11px;color:var(--mut);margin:6px 0 12px">Enter password to view</div>'
       +'<input id="gpw" type="password" autocomplete="current-password" style="width:100%;background:var(--pan2);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:10px;font-size:15px" />'
-      +'<button id="gbtn" style="width:100%;margin-top:10px;background:var(--acc);border:0;border-radius:8px;color:#fff;font-weight:700;padding:10px;font-size:13px;cursor:pointer">Open</button></div>';
+      +'<div style="font-size:9px;opacity:.5;margin-top:8px">build '+BUILD+'</div><button id="gbtn" style="width:100%;margin-top:10px;background:var(--acc);border:0;border-radius:8px;color:#fff;font-weight:700;padding:10px;font-size:13px;cursor:pointer">Open</button></div>';
     document.body.appendChild(g);
     function go(){var v=document.getElementById('gpw').value.trim();if(!v)return;try{localStorage.setItem('as_pw',v);}catch(e){}g.remove();_fetch(v);}
     document.getElementById('gbtn').onclick=go;
