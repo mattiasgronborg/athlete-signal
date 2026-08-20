@@ -95,7 +95,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <div class="quote" id="quote"></div>
 <div class="foot" id="foot"></div></div><div id="tt"></div>
 <script>
-var BUILD="2.9 · 2026-08-20 · nulägesmarkering, luft runt NOW";
+var BUILD="3.0 · 2026-08-20 · veckoetikett på volymkorten";
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
 function num(v){if(v==null||v==='')return null;return typeof v==='number'?v:parseFloat(String(v).replace(',','.'));}
 function pd(s){return new Date(s+'T00:00:00');}
@@ -273,7 +273,8 @@ document.getElementById('engine').innerHTML=[
    var prevC=comp.length>1?vv[comp[comp.length-2]]:null;
    var pctR=(lastC!=null&&prevC)?Math.round((lastC/prevC-1)*100):null;
    var chipR=pctR==null?null:(wkIsDL(comp[comp.length-1])?{cls:'acc',txt:'deload wk'}:{cls:(pctR>=0?'good':'warn'),txt:(pctR>=0?'+':'')+pctR+'% wk/wk'});
-   return mpanel('eng','Weekly run volume','Run km · completed weeks',(lastC!=null?lastC.toFixed(1)+' km':'—'),chipR,null,null,barsvg(comp.map(function(k){return P(+vv[k].toFixed(1),vv[k].toFixed(1)+' km',k);}),'Weekly running distance — completed weeks only.')+'<div class="axis"><span>this wk so far: '+sofar.toFixed(1)+' km</span><span>aim '+cfg.goals.volume+' km · ramp ≤ +15%/wk</span></div>','Weekly running distance — completed weeks only. The chip tracks week-over-week change, which is what we steer by; '+cfg.goals.volume+' km/wk is the destination, not the weekly signal.');})(),
+   var lastKr=comp.length?comp[comp.length-1]:null;
+   return mpanel('eng','Weekly run volume','Run km · '+(lastKr?'last completed week ('+String(lastKr).slice(5)+')':'completed weeks'),(lastC!=null?lastC.toFixed(1)+' km':'—'),chipR,null,null,barsvg(comp.map(function(k){return P(+vv[k].toFixed(1),vv[k].toFixed(1)+' km',k);}),'Weekly running distance — completed weeks only.')+'<div class="axis"><span>this wk so far: '+sofar.toFixed(1)+' km</span><span>aim '+cfg.goals.volume+' km · ramp ≤ +15%/wk</span></div>','Weekly running distance — completed weeks only. The chip tracks week-over-week change, which is what we steer by; '+cfg.goals.volume+' km/wk is the destination, not the weekly signal.');})(),
   (function(){var cw=iso(now);
    var bv={},bmiss={};
    fdate(D.bike,c).forEach(function(b){if(!b.date)return;var k=iso(pd(b.date));var d=num(b.dist);
@@ -288,7 +289,8 @@ document.getElementById('engine').innerHTML=[
    var sofarM=bv[cw]!=null?bv[cw]:0;
    var gaps=bcomp.reduce(function(a,k){return a+(bmiss[k]||0);},0);
    var chipM=pctM==null?null:(wkIsDL(bcomp[bcomp.length-1])?{cls:'acc',txt:'deload wk'}:{cls:(pctM>=0?'good':'warn'),txt:(pctM>=0?'+':'')+pctM+'% wk/wk'});
-   return mpanel('eng','Weekly bike volume','BikeErg metres · completed weeks',(lastM!=null?fmtN(Math.round(lastM))+'<small> m</small>':'—'),chipM,null,null,
+   var lastK=bcomp.length?bcomp[bcomp.length-1]:null;
+   return mpanel('eng','Weekly bike volume','BikeErg metres · '+(lastK?'last completed week ('+String(lastK).slice(5)+')':'completed weeks'),(lastM!=null?fmtN(Math.round(lastM))+'<small> m</small>':'—'),chipM,null,null,
     barsvg(bcomp.map(function(k){return P(Math.round(bv[k]),fmtN(Math.round(bv[k]))+' m',k);}),'Weekly BikeErg metres — completed weeks only.')
     +'<div class="axis"><span>this wk so far: '+fmtN(Math.round(sofarM))+' m</span><span>'+(gaps?gaps+(gaps>1?' sessions':' session')+' without distance':'series from '+String(bks[0]||'').slice(5))+'</span></div>',
     'Weekly BikeErg distance in metres — completed weeks only. The series starts at the first week where every logged bike session had a distance; earlier indoor-cycle sessions logged time only and would read as false zeros.');})(),
