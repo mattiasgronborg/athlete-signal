@@ -37,6 +37,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 .panel h3{margin:0 0 1px;font-size:12px}.panel .sub{font-size:9px;color:var(--mut);margin-bottom:6px}
 .eng h3{color:var(--acc)}.cha h3{color:var(--acc2)}
 .bars{display:flex;align-items:flex-end;gap:4px;height:56px}.bars>div{flex:1;background:var(--acc);border-radius:3px 3px 0 0;min-height:2px}
+.bars>div.wip{background:transparent;border:1.5px dashed var(--acc);opacity:.9}
 .axis{display:flex;justify-content:space-between;font-size:9px;color:var(--mut);margin-top:4px}
 .prog{margin-bottom:10px}.prog .t{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px}
 .prog .pctl{font-size:9px;color:var(--mut);margin-bottom:3px}
@@ -122,7 +123,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <div class="quote" id="quote"></div>
 <div class="foot" id="foot"></div></div><div id="tt"></div>
 <script>
-var BUILD="3.3 · 2026-08-20 · Field position omgjord + lågintensiv volym";
+var BUILD="3.4 · 2026-08-20 · pågående vecka syns i volymkorten";
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
 function num(v){if(v==null||v==='')return null;return typeof v==='number'?v:parseFloat(String(v).replace(',','.'));}
 function pd(s){return new Date(s+'T00:00:00');}
@@ -281,7 +282,15 @@ function isRow(t){var v=String(t&&t.type||'');return v==='Row'||v==='Rodd';}
 function fdate(a,c){return byd(a).filter(function(x){return !c||pd(x.date)>=c;});}
 function mpanel(cls,title,sub,val,chip,series,refLine,body,desc){if(val==='—'||val==null)val='<span style="color:var(--mut);font-weight:600">—</span>';return '<div class="card panel '+cls+'" data-desc="'+String(desc||sub).replace(/<[^>]+>/g,'').replace(/"/g,'')+'"><h3>'+title+'</h3><div class="sub">'+sub+'</div><div class="mrow"><div class="mval">'+val+'</div>'+(chip?'<span class="bdelta '+chip.cls+'">'+chip.txt+'</span>':'')+'</div>'+(body||bspark(series,refLine))+'</div>';}function panel(cls,title,sub,body){return '<div class="card panel '+cls+'" data-desc="'+String(sub).replace(/<[^>]+>/g,'').replace(/"/g,'')+'"><h3>'+title+'</h3><div class="sub">'+sub+'</div>'+body+'</div>';}
 function bigspark(vals,lower,desc){var s=(vals||[]).map(function(o){return o&&typeof o==='object'?o:{v:o,d:String(o),t:''};}).filter(function(o){return o.v!=null;});return s.length<2?'<div class="na">Awaiting data</div>':spark(s,lower,'bigspark',desc);}
-function barsvg(series,desc){if(!series.length)return '<div class="na">Awaiting</div>';var mx=Math.max.apply(0,series.map(function(o){return o.v;}));return '<div class="bars">'+series.map(function(o){return '<div class="pt" data-d="'+o.d+'" data-t="'+(o.t||'')+'" data-desc="'+(desc||'')+'" style="height:'+(o.v/mx*100).toFixed(0)+'%"></div>';}).join('')+'</div><div class="axis"><span>'+String(series[0].t||'').slice(5)+'</span><span>'+String(series[series.length-1].t||'').slice(5)+'</span></div>';}
+function barsvg(series,desc,wip){if(!series.length&&!wip)return '<div class="na">Awaiting</div>';
+ // wip = den PAGAENDE veckan. Ritas streckad och rors aldrig av vecka-mot-vecka-jamforelsen,
+ // men syns direkt sa kortet inte ser dott ut mitt i veckan.
+ var all=series.concat(wip?[wip]:[]);
+ var mx=Math.max.apply(0,all.map(function(o){return o.v;}))||1;
+ var bar=function(o,cls){return '<div class="pt'+(cls||'')+'" data-d="'+o.d+'" data-t="'+(o.t||'')+'" data-desc="'+(desc||'')+'" style="height:'+Math.max(2,o.v/mx*100).toFixed(0)+'%"></div>';};
+ return '<div class="bars">'+series.map(function(o){return bar(o,'');}).join('')+(wip?bar(wip,' wip'):'')
+  +'</div><div class="axis"><span>'+String(all[0].t||'').slice(5)+'</span><span>'
+  +String(all[all.length-1].t||'').slice(5)+(wip?' · pågår':'')+'</span></div>';}
 function renderTrends(w){var c=cut(w);
  var tSki=fdate(D.thr,c).filter(function(t){return t.type==='Ski'&&psec(t.pace)!=null;}).map(function(t){return P(psec(t.pace),mmss(psec(t.pace))+' /500m Ski',t.date);});
  var tRowE=fdate(D.thr,c).filter(function(t){return isRow(t)&&psec(t.pace)!=null;}).map(function(t){return P(psec(t.pace),mmss(psec(t.pace))+' /500m Row',t.date);});
@@ -313,7 +322,7 @@ document.getElementById('engine').innerHTML=[
    var pctR=(lastC!=null&&prevC)?Math.round((lastC/prevC-1)*100):null;
    var chipR=pctR==null?null:(wkIsDL(comp[comp.length-1])?{cls:'acc',txt:'deload wk'}:{cls:(pctR>=0?'good':'warn'),txt:(pctR>=0?'+':'')+pctR+'% wk/wk'});
    var lastKr=comp.length?comp[comp.length-1]:null;
-   return mpanel('eng','Weekly run volume','Run km · '+(lastKr?'last completed week ('+String(lastKr).slice(5)+')':'completed weeks'),(lastC!=null?lastC.toFixed(1)+' km':'—'),chipR,null,null,barsvg(comp.map(function(k){return P(+vv[k].toFixed(1),vv[k].toFixed(1)+' km',k);}),'Weekly running distance — completed weeks only.')+'<div class="axis"><span>this wk so far: '+sofar.toFixed(1)+' km</span><span>aim '+cfg.goals.volume+' km · ramp ≤ +15%/wk</span></div>','Weekly running distance — completed weeks only. The chip tracks week-over-week change, which is what we steer by; '+cfg.goals.volume+' km/wk is the destination, not the weekly signal.');})(),
+   return mpanel('eng','Weekly run volume','Run km · '+(lastKr?'last completed week ('+String(lastKr).slice(5)+')':'completed weeks'),(lastC!=null?lastC.toFixed(1)+' km':'—'),chipR,null,null,barsvg(comp.map(function(k){return P(+vv[k].toFixed(1),vv[k].toFixed(1)+' km',k);}),'Weekly running distance — completed weeks only. The dashed bar is the week in progress; it is shown but never counted in the week-over-week chip.',sofar>0?P(+sofar.toFixed(1),sofar.toFixed(1)+' km · pågår',cw):null)+'<div class="axis"><span>this wk so far: '+sofar.toFixed(1)+' km</span><span>aim '+cfg.goals.volume+' km · ramp ≤ +15%/wk</span></div>','Weekly running distance — completed weeks only. The chip tracks week-over-week change, which is what we steer by; '+cfg.goals.volume+' km/wk is the destination, not the weekly signal.');})(),
   (function(){var cw=iso(now);
    var bv={},bmiss={};
    fdate(D.bike,c).forEach(function(b){if(!b.date)return;var k=iso(pd(b.date));var d=num(b.dist);
@@ -330,7 +339,7 @@ document.getElementById('engine').innerHTML=[
    var chipM=pctM==null?null:(wkIsDL(bcomp[bcomp.length-1])?{cls:'acc',txt:'deload wk'}:{cls:(pctM>=0?'good':'warn'),txt:(pctM>=0?'+':'')+pctM+'% wk/wk'});
    var lastK=bcomp.length?bcomp[bcomp.length-1]:null;
    return mpanel('eng','Weekly bike volume','BikeErg metres · '+(lastK?'last completed week ('+String(lastK).slice(5)+')':'completed weeks'),(lastM!=null?fmtN(Math.round(lastM))+'<small> m</small>':'—'),chipM,null,null,
-    barsvg(bcomp.map(function(k){return P(Math.round(bv[k]),fmtN(Math.round(bv[k]))+' m',k);}),'Weekly BikeErg metres — completed weeks only.')
+    barsvg(bcomp.map(function(k){return P(Math.round(bv[k]),fmtN(Math.round(bv[k]))+' m',k);}),'Weekly BikeErg metres — completed weeks only. The dashed bar is the week in progress; it is shown but never counted in the week-over-week chip.',sofarM>0?P(Math.round(sofarM),fmtN(Math.round(sofarM))+' m · pågår',cw):null)
     +'<div class="axis"><span>this wk so far: '+fmtN(Math.round(sofarM))+' m</span><span>'+(gaps?gaps+(gaps>1?' sessions':' session')+' without distance':'series from '+String(bks[0]||'').slice(5))+'</span></div>',
     'Weekly BikeErg distance in metres — completed weeks only. The series starts at the first week where every logged bike session had a distance; earlier indoor-cycle sessions logged time only and would read as false zeros.');})(),
   (function(){
@@ -351,7 +360,9 @@ document.getElementById('engine').innerHTML=[
      :((pct>=-10&&pct<=15)?{cls:'good',txt:(pct>=0?'+':'')+pct+'% wk/wk'}:{cls:'warn',txt:(pct>=0?'+':'')+pct+'% wk/wk'}));
    return mpanel('eng','Low-intensity volume','Classified by session goal — not by heart rate · completed weeks',
     (lastL!=null?(lastL/60).toFixed(1)+' h':'—'),chip,null,null,
-    bspark(lkC.map(function(k){return P(+(lv[k]/60).toFixed(2),(lv[k]/60).toFixed(1)+' h · '+(ln[k]||0)+' pass',k);}),null)
+    barsvg(lkC.map(function(k){return P(+(lv[k]/60).toFixed(2),(lv[k]/60).toFixed(1)+' h · '+(ln[k]||0)+' pass',k);}),
+      'Weekly low-intensity hours — completed weeks only. The dashed bar is the week in progress; it is shown but never counted in the week-over-week chip.',
+      sofar>0?P(+(sofar/60).toFixed(2),(sofar/60).toFixed(1)+' h · '+nSofar+' pass · pågår',cw):null)
     +'<div class="axis"><span>this wk so far: '+(sofar/60).toFixed(1)+' h · '+nSofar+' pass</span><span>'
     +(avg4!=null?'4-wk avg '+(avg4/60).toFixed(1)+' h':'')+'</span></div>',
     'Weekly hours of low-intensity work — easy/long runs and steady bike — classified by what the session was FOR (its Zone label), never by where heart rate landed. A Z2 session that sits mostly in HR Z1 still counts in full: that is how session-goal classification works, and volume is what builds the aerobic base. Ramp target +10-15%/wk.');})(),
