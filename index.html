@@ -123,7 +123,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <div class="quote" id="quote"></div>
 <div class="foot" id="foot"></div></div><div id="tt"></div>
 <script>
-var BUILD="3.4 · 2026-08-20 · pågående vecka syns i volymkorten";
+var BUILD="3.5 · 2026-08-20 · leg curl/ext i kg per ben";
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
 function num(v){if(v==null||v==='')return null;return typeof v==='number'?v:parseFloat(String(v).replace(',','.'));}
 function pd(s){return new Date(s+'T00:00:00');}
@@ -152,7 +152,7 @@ function adapt(raw){
     run:  A('Running').map(function(o){return {date:o['Date'],dist:o['Distance (km)'],time:o['Time (min)'],cad:o['Cadence (spm)'],zone:o['Zone'],hr:o['Avg HR (bpm)'],split:o['Zone split']};}),
     bike: A('Bike').map(function(o){return {date:o['Date'],time:o['Time (min)'],dist:o['Distance (km)'],bpm:o['Avg HR'],watt:o['Avg watt'],zone:o['Zone'],type:o['Type'],split:o['Zone split'],damper:o['Damper'],drag:o['Drag factor']};}),
     thr:  A('Threshold').map(function(o){return {date:o['Date'],type:o['Type'],ints:o['Intervals'],len:o['Length (min/int)'],meters:o['Total meters'],pace:o['Avg /500m'],pacekm:o['Pace /km'],watt:o['Avg watt'],bpm:o['Avg HR'],split:o['Zone split'],damper:o['Damper'],drag:o['Drag factor']};}),
-    str:  A('Strength').map(function(o){return {date:o['Date'],dl:o['Deadlift (kg)'],dlr:o['DL reps'],fs:o['Front squat (kg)'],fsr:o['FS reps'],pr:o['Strict press (kg)'],prr:o['SP reps'],bg:o['Bulgarian (kg/h)'],bgr:o['BS reps/leg'],bl:o['Back lunge (kg/h)'],blr:o['BL reps/leg'],lc:o['Leg curl (kg)'],lcr:o['LC reps'],le:o['Leg ext (kg)'],ler:o['LE reps']};}),
+    str:  A('Strength').map(function(o){return {date:o['Date'],dl:o['Deadlift (kg)'],dlr:o['DL reps'],fs:o['Front squat (kg)'],fsr:o['FS reps'],pr:o['Strict press (kg)'],prr:o['SP reps'],bg:o['Bulgarian (kg/h)'],bgr:o['BS reps/leg'],bl:o['Back lunge (kg/h)'],blr:o['BL reps/leg'],lc:o['Leg curl (kg/ben)'],lcr:o['LC reps'],le:o['Leg ext (kg/ben)'],ler:o['LE reps']};}),
     hyrox:A('Hyrox').map(function(o){return {date:o['Date'],push:o['Sled push (kg)'],lunge:o['Lunges (kg)'],pull:o['Sled pull (kg)'],farm:o['Farmers (kg/hand)'],vest:o['Vest (kg)'],len:o['Session length (min)'],split:o['Zone split'],wb:o['Wall balls (kg)'],bur:o['Burpee broad jump (m)'],rounds:o['Rounds (B1·B2·B3)'],wbr:o['WB reps/round']};}),
     ron:  A('Roncevic').map(function(o){return {date:o['Date'],wave:o['Wave'],wb:o['WB weight (kg)'],v1:o['Round 1 (s)'],v2:o['Round 2 (s)'],v3:o['Round 3 (s)'],v4:o['Round 4 (s)'],badge:o['Badge WB'],split:o['Zone split']};}),
     rec:  A('Recovery').map(function(o){return {date:o['Date'],sleep:o['Sleep (h)'],sleepq:o['Sleep quality (1-100)'],rhr:o['Resting HR (bpm)'],mot:o['Motivation (green/yellow/red)']};}),
