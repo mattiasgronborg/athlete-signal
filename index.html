@@ -144,7 +144,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <div class="quote" id="quote"></div>
 <div class="foot" id="foot"></div></div><div id="tt"></div>
 <script>
-var BUILD="3.10 · 2026-08-22 · jokerlampan heter Joker · namnvakt för lamporna";
+var BUILD="3.11 · 2026-08-23 · västen räknas bara på wall balls + lunges";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -226,6 +226,18 @@ function enumGuard(){
 // Jokerlampan ska heta samma sak som jokerns EGEN flik, och aldrig samma sak
 // som nagon annan. Kontrollen granskar KODEN och kors aven pa tom payload.
 var JOKER='Joker';   // valfri klass — raknas mot budgeten, egen farg, listas aldrig som "left"
+// VÄSTEN SITTER INTE PÅ ALLT (23 aug). Den bars pa alla stationer fram till
+// 22 aug; sedan det nya Hyrox-upplagget bars den bara pa wall balls och lunges,
+// dar den styr vagvikten. Proportionen sager varfor: 8 kg vast ar +89 % pa en
+// 9 kg wall ball, +27 % pa 30 kg lunges och +4 % pa ett 210 kg slad-drag.
+// Vasten var alltid ett verktyg for de tva — att den satt pa under sleden var
+// bieffekt, inte traningsavsikt.
+// INGEN RAD I ARKET ANDRADES. 'Vest (kg)' ar sant som loggat; det ar BETYDELSEN
+// som smalnat, och betydelsen bor i koden. Att skriva om tre historiska pass for
+// att slippa andra en rad JS hade varit en forfalskning.
+var VEST_ON = ['wb','lunge'];   // MAP.hyrox.cols-nycklar, inte rubriker
+function vestApplies(f){ return VEST_ON.indexOf(f) >= 0; }
+
 function lampGuard(){
   var out=[], own=MAP.cls.tab;
   if(JOKER!==own)
@@ -558,12 +570,13 @@ document.getElementById('engine').innerHTML=[
  ].join('');
 function stLast(f){var a=byd(D.hyrox).map(function(h){return num(h[f]);}).filter(function(v){return v!=null;});return a.length?a[a.length-1]:null;}
 function stRow(name,f,pro,unit){var rows=byd(D.hyrox).filter(function(h){return num(h[f])!=null;});
- var srs=rows.map(function(h){var ve=num(h.vest)||0;var tot=+(num(h[f])+ve).toFixed(1);return P(tot,tot+' '+unit+(ve?' ('+num(h[f])+'+'+ve+' vest)':''),h.date);});
+ var vOn=vestApplies(f);   // vasten bars bara pa wall balls + lunges
+ var srs=rows.map(function(h){var ve=vOn?(num(h.vest)||0):0;var tot=+(num(h[f])+ve).toFixed(1);return P(tot,tot+' '+unit+(ve?' ('+num(h[f])+'+'+ve+' vest)':''),h.date);});
  var lastR=rows.length?rows[rows.length-1]:null;var cur=srs.length?srs[srs.length-1].v:null;var d=cur!=null?+(cur-pro).toFixed(1):null;
  var chip=cur==null?'<span class="bdelta">awaiting first log</span>':(d>0?'<span class="bdelta good">+'+d+' over Pro</span>':(d===0?'<span class="bdelta acc">at start (Pro)</span>':'<span class="bdelta warn">'+d+' vs Pro</span>'));
- var bk=lastR?(num(lastR[f])+(num(lastR.vest)?' + '+num(lastR.vest)+' vest':'')):'';
+ var bk=lastR?(num(lastR[f])+((vOn&&num(lastR.vest))?' + '+num(lastR.vest)+' vest':'')):'';
  var trend=srs.length>1?('<div style="font-size:10px;color:var(--mut);margin-top:2px">'+srs[0].v+' → '+cur+' '+unit+' since start · +'+((cur-srs[0].v)%1?(cur-srs[0].v).toFixed(1):(cur-srs[0].v))+' added</div>'):'';
- return '<div class="prog"><div class="pctl" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b style="color:var(--ink)">'+name+'</b> <span style="opacity:.6">· start Pro '+pro+' '+unit+'</span></span>'+chip+'</div><div class="t" style="margin-top:2px"><span style="font-size:14px;font-weight:800">'+(cur!=null?cur+' '+unit:'—')+'</span>'+(bk&&num(lastR.vest)?'<span style="font-size:10px;color:var(--mut)">'+bk+'</span>':'')+'</div>'+trend+(srs.length>1?bspark(srs,pro):'')+'</div>';}
+ return '<div class="prog"><div class="pctl" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b style="color:var(--ink)">'+name+'</b> <span style="opacity:.6">· start Pro '+pro+' '+unit+'</span></span>'+chip+'</div><div class="t" style="margin-top:2px"><span style="font-size:14px;font-weight:800">'+(cur!=null?cur+' '+unit:'—')+'</span>'+((bk&&vOn&&num(lastR.vest))?'<span style="font-size:10px;color:var(--mut)">'+bk+'</span>':'')+'</div>'+trend+(srs.length>1?bspark(srs,pro):'')+'</div>';}
 document.getElementById('chassis').innerHTML=[
   panel('cha','Strength → HybridX Pro','Cycle baseline (w1) · goal = kg × reps capacity, not 1RM · ✓ when a logged session hits goal weight × goal reps (any set scheme)',
     waveLine('Deadlift',D.str,'dl',cfg.goals.dl,'×25','dlr')+waveLine('Strict press',D.str,'pr',cfg.goals.pr,'×25','prr')+waveLine('Back lunge',D.str,'bl',cfg.goals.bl,'×50','blr')
@@ -574,8 +587,8 @@ document.getElementById('chassis').innerHTML=[
     +waveLine('Leg extension',D.str,'le',null,null,'ler')),
   (function(){var vests=byd(D.hyrox).map(function(h){return num(h.vest);}).filter(function(v){return v!=null;});var vlast=vests.length?vests[vests.length-1]:null;
    var vestSrs=byd(D.hyrox).filter(function(h){return num(h.vest)!=null;}).map(function(h){return P(num(h.vest),num(h.vest)+' kg',h.date);});
-   var vestRow='<div class="prog" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><div class="pctl" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="min-width:0"><b style="color:var(--ink)">Vest</b> <span style="opacity:.6">· in totals above · race = none</span></span>'+(vlast!=null?'<span class="bdelta good">'+vlast+' kg</span>':'<span class="bdelta">logs from next session</span>')+'</div>'+(vestSrs.length>1?bspark(vestSrs,0):'')+'</div>';
-   return panel('cha','Hyrox stations — wave load','Wave = station + vest, summed · start = Pro race weight · progress = kg ABOVE Pro',
+   var vestRow='<div class="prog" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><div class="pctl" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="min-width:0"><b style="color:var(--ink)">Vest</b> <span style="opacity:.6">· the only wave lever there — balls come in 9 or 14 kg, sandbag only 30 · race = none</span></span>'+(vlast!=null?'<span class="bdelta good">'+vlast+' kg</span>':'<span class="bdelta">logs from next session</span>')+'</div>'+(vestSrs.length>1?bspark(vestSrs,0):'')+'</div>';
+   return panel('cha','Hyrox stations — wave load','Wave = station weight · vest counts on wall balls + lunges only · start = Pro race weight · progress = kg ABOVE Pro',
     stRow('Sled push','push',202,'kg')+stRow('Sled pull','pull',153,'kg')+stRow('Sandbag lunges','lunge',30,'kg')+stRow('Farmers','farm',32,'kg/h')+stRow('Wall balls','wb',9,'kg')+vestRow+
     (function(){var hl=byd(D.hyrox);var lastH=hl.length?hl[hl.length-1]:null;if(!lastH||(!lastH.rounds&&!lastH.wbr&&num(lastH.bur)==null))return '';
      var bits=[];if(lastH.rounds)bits.push('B1·B2·B3 '+lastH.rounds);if(lastH.wbr)bits.push('WB '+lastH.wbr+'/round');if(num(lastH.bur)!=null)bits.push('BBJ '+num(lastH.bur)+' m');
@@ -790,6 +803,10 @@ function selftest(raw){
     });
   });
 
+  t('Västen räknas bara på wall balls + lunges', function(){
+    var bad=VEST_ON.filter(function(f){return ['push','pull','farm'].indexOf(f)>=0;});
+    return bad.length ? {ok:false, note:'väst på '+bad.join(', ')}
+                      : {ok:true, note:'VEST_ON = '+VEST_ON.join(' · ')}; });
   t('Jokerlampan krockar inte med någon flik', function(){
     var d=lampGuard();
     return d.length ? {ok:false, note:d.join(' · ')}
