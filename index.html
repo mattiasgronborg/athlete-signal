@@ -144,8 +144,8 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <div class="quote" id="quote"></div>
 <div class="foot" id="foot"></div></div><div id="tt"></div>
 <script>
-var BUILD="3.8 · 2026-08-22 · ett namn per pass: BikeErg, Joker, Roncevic · död zonkod struken";
-var META=null;   // _meta fran backenden: {schemaVersion, generatedAt}
+var BUILD="3.10 · 2026-08-22 · jokerlampan heter Joker · namnvakt för lamporna";
+var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
 function num(v){if(v==null||v==='')return null;return typeof v==='number'?v:parseFloat(String(v).replace(',','.'));}
@@ -202,19 +202,57 @@ var MAP = {
 };
 // Vardedomaner koden faktiskt forlitar sig pa. Ett okant varde filtreras aldrig
 // bort tyst — det ger en varningsrad. Det var kontraktet 'Row' mot 'Rodd' som brast.
+// NYCKELN MASTE VARA FLIKENS NAMN. dqCheck slar upp ENUMS[m.tab]; en nyckel som
+// inte matchar nagon flik i MAP ger undefined och da ar vardekontrollen for den
+// fliken AVSTANGD utan att nagon vet. Nyckeln het 'Bike' i tva veckor efter att
+// fliken bytt namn till 'BikeErg' — Row/Rodd-monstret, den gangen i sjalva vakten.
+// Boot-kontrollen nedan (enumGuard) gor att det inte kan hanta igen.
 var ENUMS = {
   Running:  {'Zone':['Z1','Z2','Z3','Z4','Z5']},
-  Bike:     {'Zone':['Z1','Z2','Z3','Z4','Z5']},
+  BikeErg:  {'Zone':['Z1','Z2','Z3','Z4','Z5'], 'Type':['BikeErg']},
   Threshold:{'Type':['Ski','Row','Run']},
   Races:    {'Division':['Pro','Open','Pro doubles','Doubles','Relay']},
   Field:    {'Weight vs Open':['same','heavier in Pro']}
 };
+// Varje ENUMS-nyckel maste motsvara en MAP[*].tab. Kontrollen ar oberoende av
+// data och kors aven pa tom payload — den granskar KODEN, inte arket.
+function enumGuard(){
+  var tabs=Object.keys(MAP).map(function(k){return MAP[k].tab;});
+  return Object.keys(ENUMS).filter(function(k){return tabs.indexOf(k)<0;});
+}
+// ETT NAMN PER SAK, aven i lamporna. Jokerlampan het 'LifeLab' medan fliken
+// LifeLab ar LAKTATTESTET — tva olika saker med samma namn i samma vy. Ingen
+// kod gick sonder av det, vilket ar precis varfor det overlevde sa lange.
+// Jokerlampan ska heta samma sak som jokerns EGEN flik, och aldrig samma sak
+// som nagon annan. Kontrollen granskar KODEN och kors aven pa tom payload.
+var JOKER='Joker';   // valfri klass — raknas mot budgeten, egen farg, listas aldrig som "left"
+function lampGuard(){
+  var out=[], own=MAP.cls.tab;
+  if(JOKER!==own)
+    out.push('jokerlampan heter "'+JOKER+'" men jokerns flik heter "'+own+'"');
+  Object.keys(MAP).forEach(function(k){
+    if(k!=='cls' && MAP[k].tab===JOKER)
+      out.push('jokerlampan "'+JOKER+'" är också namnet på fliken '+MAP[k].tab);
+  });
+  return out;
+}
 var FIXHINT = {Field:'Kör hxAggregate() i Apps Script.', Races:'Kör hxMyRaces() i Apps Script.'};
 function fixOf(tab){ return FIXHINT[tab] || 'Kör updateHeaders() i Apps Script, sedan Manage deployments → New version.'; }
 
 var DQ = [];   // dataintegritetsfynd fran boot-kontrollen
 function dqCheck(raw){
   var out=[]; raw = raw||{};
+  // Vakten over vakten. Kors forst och oberoende av data: en enum-nyckel som inte
+  // matchar nagon flik slas aldrig upp, och da tiger vardekontrollen for evigt.
+  enumGuard().forEach(function(k){
+    out.push({sev:'err', tab:k,
+      what:'ENUMS-nyckeln "'+k+'" matchar ingen flik i MAP — värdekontrollen för den fliken är död',
+      fix:'Rätta nyckeln i ENUMS.'});
+  });
+  lampGuard().forEach(function(m){
+    out.push({sev:'err', tab:'Lamporna', what:'Namnkrock: '+m,
+      fix:'Rätta JOKER i index.html — lampan ska heta samma sak som sin flik.'});
+  });
   var meta = raw._meta;
   if(!meta || meta.schemaVersion==null){
     out.push({sev:'err', tab:'—', what:'Backend skickar ingen schemaversion (dashboarden väntar v'+EXPECT_SCHEMA+')', fix:'Klistra in senaste Code.gs och deploya om (Manage deployments → New version).'});
@@ -222,6 +260,29 @@ function dqCheck(raw){
     out.push({sev:'err', tab:'—', what:'Apps Script kör schema v'+meta.schemaVersion+', dashboarden väntar v'+EXPECT_SCHEMA, fix:'Deploya om (Manage deployments → New version).'});
   } else if(+meta.schemaVersion > EXPECT_SCHEMA){
     out.push({sev:'warn', tab:'—', what:'Apps Script kör schema v'+meta.schemaVersion+' men den här dashboarden är byggd för v'+EXPECT_SCHEMA, fix:'Pusha senaste index.html till GitHub.'});
+  }
+  // ── Skrivkoens haelsa (build 3.9) ────────────────────────────────────────
+  // processInbox stamplar INBOX_LAST_RUN vid varje korning, aven med tom ko.
+  // Slutar triggern ga finns ingen annan detektor: Mattias ser det inte, och en
+  // coach-chatt saknar minne mellan sessioner. Overvakningen ligger darfor pa
+  // ytan som anda oppnas. Aldern raknas mot _meta.generatedAt — ALDRIG mot
+  // webblasarens klocka, en skev telefonklocka far inte kunna larma om en frisk ko.
+  if(meta){
+    if(meta.queueLastRun==null){
+      out.push({sev:'warn', tab:'Skrivkön', what:'Backenden rapporterar ingen kötidsstämpel',
+        fix:'Klistra in senaste Code.gs och deploya om.'});
+    } else {
+      var _gen=Date.parse(meta.generatedAt), _q=Date.parse(meta.queueLastRun);
+      if(isFinite(_gen)&&isFinite(_q)){
+        var _min=Math.floor((_gen-_q)/60000);
+        if(_min>10){
+          var _d=new Date(_q), _p=function(x){return (x<10?'0':'')+x;};
+          out.push({sev:'err', tab:'Skrivkön',
+            what:'har inte kört sedan '+_p(_d.getHours())+':'+_p(_d.getMinutes())+' ('+_min+' min sedan)',
+            fix:'Kör setupInboxTrigger i Apps Script och kontrollera Triggers-listan.'});
+        }
+      }
+    }
   }
   var gone=[];
   Object.keys(MAP).forEach(function(k){
@@ -312,8 +373,10 @@ var sigAll=yels>=2?'yellow':'green';
 var wk=iso(now);
 function inwk(a){return a.filter(function(x){return x.date&&iso(pd(x.date))===wk;});}
 var longWk=D.bike.filter(function(b){return b.date&&iso(pd(b.date))===wk&&num(b.time)>=50;}).length+D.run.filter(function(r){return r.date&&iso(pd(r.date))===wk&&num(r.time)>=50;}).length;
-var done={Hyrox:inwk(D.hyrox).length>0,Threshold:inwk(D.thr).length>0,Strength:inwk(D.str).length>0,'Roncevic':inwk(D.ron).length>0,'Long Z2':longWk>0,'LifeLab':inwk(D.cls||[]).length>0};
-var JOKER='LifeLab'; // valfri klass — räknas mot budgeten, egen färg, listas aldrig som "left"
+// Lampornas etiketter. Jokerns heter JOKER (top-level, vaktad av lampGuard) —
+// ALDRIG 'LifeLab': den fliken ar laktattestet och inget annat.
+var done={Hyrox:inwk(D.hyrox).length>0,Threshold:inwk(D.thr).length>0,Strength:inwk(D.str).length>0,'Roncevic':inwk(D.ron).length>0,'Long Z2':longWk>0};
+done[JOKER]=inwk(D.cls||[]).length>0;
 var sessN=Object.keys(done).filter(function(k){return done[k];}).length;
 // Card 1 · Phase — where in the cycle + what comes next.
 var _pi=ph?cfg.phases.indexOf(ph):-1, phNext=_pi>=0?cfg.phases[_pi+1]:null;
@@ -348,7 +411,7 @@ document.getElementById('status').innerHTML=[
 var _src=document.getElementById('src');
 if(_src){_src.innerHTML='Where am I today';} // boot() körs bara efter LIVE=true; offline går till _offline()
 document.getElementById('wtype').textContent='Week type: '+(ph?(/test/.test(ph[3])?'Deload + tests — no threshold, no heavy stations':/Deload/.test(ph[3])?'Deload — no key sessions, recovery only':/Taper/.test(ph[3])?'Taper — short race-pace touches only':'Build — 5 key sessions')+'':'—')+'. Matched by content, not by day.';
-document.getElementById('lamps').innerHTML=(ph&&/Deload|Taper/.test(ph[3]))?'<span style="font-size:11px;color:var(--mut)">No key sessions this week — the five lamps return in build.</span>':Object.keys(done).map(function(k){var j=(k===JOKER);return '<div class="lamp"><div class="lc '+(done[k]?'on':'')+'"'+(done[k]&&j?' style="background:var(--acc2);border-color:var(--acc2)"':'')+'>'+(done[k]?'✓':(j?'◇':'○'))+'</div>'+k+(j?' <span style="opacity:.6">joker</span>':'')+'</div>';}).join('');
+document.getElementById('lamps').innerHTML=(ph&&/Deload|Taper/.test(ph[3]))?'<span style="font-size:11px;color:var(--mut)">No key sessions this week — the five lamps return in build.</span>':Object.keys(done).map(function(k){var j=(k===JOKER);return '<div class="lamp"><div class="lc '+(done[k]?'on':'')+'"'+(done[k]&&j?' style="background:var(--acc2);border-color:var(--acc2)"':'')+'>'+(done[k]?'✓':(j?'◇':'○'))+'</div>'+k+(j?' <span style="opacity:.6">optional</span>':'')+'</div>';}).join('');
 var z2c=D.bike.filter(function(b){return b.date&&iso(pd(b.date))===wk;}).length+D.run.filter(function(r){return r.date&&iso(pd(r.date))===wk&&/Z/.test(String(r.zone||''));}).length;
 var z2t=6,dots='';for(var zi=0;zi<z2t;zi++){dots+='<span class="dot" style="width:12px;height:12px;margin-right:4px;background:'+(zi<z2c?'var(--good)':'var(--pan2)')+'"></span>';}
 document.getElementById('z2wk').innerHTML='<span style="font-size:9px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em">Z2 base (mornings + long)</span> &nbsp; <b style="font-size:13px">'+Math.min(z2c,z2t)+' / '+z2t+'</b> &nbsp; '+dots;
@@ -727,6 +790,20 @@ function selftest(raw){
     });
   });
 
+  t('Jokerlampan krockar inte med någon flik', function(){
+    var d=lampGuard();
+    return d.length ? {ok:false, note:d.join(' · ')}
+                    : {ok:true, note:'lampan "'+JOKER+'" · flik '+MAP.cls.tab+' · laktattestet '+MAP.lifelab.tab}; });
+  t('Varje ENUMS-nyckel matchar en flik i MAP', function(){
+    var d=enumGuard();
+    return d.length ? {ok:false, note:'död vakt: '+d.join(', ')} : {ok:true, note:Object.keys(ENUMS).join(' · ')}; });
+  t('Skrivkön har kört nyligen', function(){
+    var m=raw._meta||{};
+    if(m.queueLastRun==null) return {ok:false, note:'ingen kötidsstämpel från backenden'};
+    var g=Date.parse(m.generatedAt), q=Date.parse(m.queueLastRun);
+    if(!isFinite(g)||!isFinite(q)) return {ok:false, note:'otolkbar tidsstämpel'};
+    var mi=Math.floor((g-q)/60000);
+    return mi>10 ? {ok:false, note:mi+' min sedan senaste körningen'} : {ok:true, note:mi+' min sedan'}; });
   t('adapt() går igenom utan att kasta', function(){ var d=adapt(raw); return {ok:!!d, note:Object.keys(d).length+' serier'}; });
   t('Field position har mätdata', function(){
     var f=adapt(raw).field.filter(function(r){return r.st&&r.med!=null;});
