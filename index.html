@@ -39,7 +39,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 .bars{display:flex;align-items:flex-end;gap:4px;height:56px}.bars>div{flex:1;background:var(--acc);border-radius:3px 3px 0 0;min-height:2px}
 .bars>div.wip{background:transparent;border:1.5px dashed var(--acc);opacity:.9}
 .axis{display:flex;justify-content:space-between;font-size:9px;color:var(--mut);margin-top:4px}
-.prog{margin-bottom:10px}.prog .t{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px}
+.prog{margin-bottom:10px}.prog .t{display:flex;flex-wrap:wrap;gap:1px 10px;justify-content:space-between;font-size:11px;margin-bottom:4px}.nain{color:var(--mut);font-style:italic;font-size:11px}.wtag{white-space:nowrap;opacity:.6}
 .prog .pctl{font-size:9px;color:var(--mut);margin-bottom:3px}
 .trk{height:8px;background:var(--pan2);border-radius:5px;overflow:hidden}.trk>span{display:block;height:100%;background:var(--acc2)}
 .trk.blue>span{background:var(--acc)}
@@ -144,7 +144,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <div class="quote" id="quote"></div>
 <div class="foot" id="foot"></div></div><div id="tt"></div>
 <script>
-var BUILD="3.11 · 2026-08-23 · västen räknas bara på wall balls + lunges";
+var BUILD="3.12 · 2026-08-24 · styrka jämförs samma vågvecka mot samma · front squat fick sitt mål";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -466,15 +466,43 @@ var strTile='<div class="card tile" data-desc="Average strength increase across 
 var abase={},bmin={};byd(D.run).forEach(function(r){if(r.date){var k=iso(pd(r.date));abase[k]=(abase[k]||0)+(num(r.time)||0);}});byd(D.bike).forEach(function(b){if(b.date){var k=iso(pd(b.date));abase[k]=(abase[k]||0)+(num(b.time)||0);bmin[k]=(bmin[k]||0)+(num(b.time)||0);}});var abk=Object.keys(abase).sort();var thisB=abase[abk[abk.length-1]]||0,prevB=abase[abk[abk.length-2]]||0,basePct=prevB?Math.round((thisB/prevB-1)*100):0,thisBike=bmin[abk[abk.length-1]]||0;var baseSeries=abk.map(function(k){return P(+(abase[k]/60).toFixed(2),(abase[k]/60).toFixed(1)+' h',k);});function _lw1(f){var a=v1vals(D.str,f);return a.length?a[a.length-1]:null;}var _dl=_lw1('dl'),_pr=_lw1('pr'),_bl=_lw1('bl');var _sp=[];if(_dl)_sp.push(Math.min(1,_dl/cfg.goals.dl));if(_pr)_sp.push(Math.min(1,_pr/cfg.goals.pr));if(_bl)_sp.push(Math.min(1,_bl/cfg.goals.bl));var strPct=_sp.length?Math.round(_sp.reduce(function(a,b){return a+b;},0)/_sp.length*100):null;var sledS=byd(D.hyrox).filter(function(h){return num(h.push)!=null;}).map(function(h){return P(num(h.push),num(h.push)+' kg',h.date);});var sledCur=sledS.length?sledS[sledS.length-1].v:null;var tRunC=byd(D.thr).filter(function(t){return t.type==='Run'&&psec(t.pace)!=null;}).map(function(t){return P(psec(t.pace),mmss(psec(t.pace))+' /km',t.date);});
 // wave v1-over-v1
 function v1vals(rows,f){return byd(rows).filter(function(r){return deriveWave(r.date)==='w1'&&num(r[f])!=null;}).map(function(r){return num(r[f]);});}
-function waveLine(label,rows,f,goal,cap,repF){var s=v1vals(rows,f);var cur=s.length?s[s.length-1]:null;var note;
- var repTxt='';if(repF){var w1rows=byd(rows).filter(function(r){return deriveWave(r.date)==='w1'&&num(r[f])!=null;});var lastW1=w1rows.length?w1rows[w1rows.length-1]:null;if(lastW1&&lastW1[repF]!=null&&lastW1[repF]!=='')repTxt=' <span style="font-size:11px;color:var(--mut);font-weight:600">@ '+lastW1[repF]+' reps</span>';}
- if(s.length>=2){var cyc=((s[s.length-1]/s[s.length-2]-1)*100).toFixed(1);var tot=((s[s.length-1]/s[0]-1)*100).toFixed(1);note='<b style="color:'+(cyc>=0?'var(--good)':'var(--warn)')+'">'+(cyc>=0?'+':'')+cyc+'%</b> vs last w1 · '+(tot>=0?'+':'')+tot+'% since start';}
- else note='<span class="na">Baseline set — awaiting next w1</span>';
+var _WM=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function wdate(ds){var d=pd(ds);return d.getDate()+' '+_WM[d.getMonth()];}
+// LIKA MOT LIKA (build 3.12). Stora talet ar SENAST loggade passet, och det jamfors
+// mot forra gangen samma vagvecka kordes — w2 mot w2. Att jamfora mot forra PASSET
+// mater vagen, inte styrkan: serien blir +3 % · -23 % · +29 % · +2 %, dar -23 ar
+// deloaden och +29 ar att komma tillbaka fran den. Att bara visa w1 (som fore 3.12)
+// var det motsatta felet — kortet uppdaterades en vecka av fyra och sag dott ut
+// medan tre loggade pass inte syntes alls.
+function prevSameWave(all,i){
+  var w=deriveWave(all[i].date);
+  for(var k=i-1;k>=0;k--) if(deriveWave(all[k].date)===w) return all[k];
+  return null;
+}
+function waveLine(label,rows,f,goal,cap,repF){var s=v1vals(rows,f);var note;
+ var _all=byd(rows).filter(function(r){return num(r[f])!=null;});
+ var _last=_all.length?_all[_all.length-1]:null;
+ var cur=_last?num(_last[f]):null;
+ var repTxt='';if(repF&&_last&&_last[repF]!=null&&_last[repF]!=='')repTxt=' <span style="font-size:11px;color:var(--mut);font-weight:600">@ '+_last[repF]+' reps</span>';
+ var _pv=_last?prevSameWave(_all,_all.length-1):null;
+ var _w=_last?deriveWave(_last.date):null;
+ var _pct=null;
+ if(_pv){ _pct=((num(_last[f])/num(_pv[f])-1)*100); }
+ // Cykeltrenden w1→w1 visas bara nar den sager NAGOT ANNAT an raden ovan. Tva
+ // identiska procenttal bredvid varandra las som en bugg — det gjorde de fore 3.12.
+ var _tot=(s.length>=2)?((s[s.length-1]/s[0]-1)*100):null;
+ var _showTot=(_tot!=null)&&(_pct==null||Math.abs(_tot-_pct)>=0.05);
+ if(_pct!=null){
+   note='<b style="color:'+(_pct>=-0.05?'var(--good)':'var(--warn)')+'">'+(_pct>=0?'+':'')+_pct.toFixed(1)+'%</b> vs '+_w+' · '+wdate(_pv.date)
+        +(_showTot?' <span style="opacity:.65">· '+(_tot>=0?'+':'')+_tot.toFixed(1)+'% w1→w1 since start</span>':'');
+ } else if(_last){
+   note='<span class="nain">First '+_w+' logged — no like-for-like yet</span>';
+ } else note='<span class="nain">Awaiting first log</span>';
  var barpct=goal&&cur!=null?Math.min(100,cur/goal*100):0;
  var repGoal=cap?parseInt(cap.replace(/[^0-9]/g,''),10):null;
  var repsAt=0;if(goal&&repF){byd(rows).forEach(function(r){if(num(r[f])!=null&&num(r[f])>=goal&&r[repF]){var m=String(r[repF]).match(/(\d+)\s*[×x]\s*(\d+)/);if(m){var tot=(+m[1])*(+m[2]);if(tot>repsAt)repsAt=tot;}}});}
  var gap=(goal&&cur!=null)?(goal-cur):null;
- var gchip=gap==null?(goal?'':'<span class="bdelta">own trend</span>'):(gap>0?'<span class="bdelta acc">→ '+(gap%1?gap.toFixed(1):gap)+' kg to '+goal+'</span>':(repGoal&&repsAt>=repGoal?'<span class="bdelta good">'+goal+' kg × '+repGoal+' ✓</span>':'<span class="bdelta acc">'+goal+' kg ✓ · reps '+repsAt+'/'+(repGoal||'?')+'</span>'));return '<div class="prog"><div class="pctl" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>'+label+(cap?' <span style="opacity:.6">'+cap+'</span>':'')+'</span>'+gchip+'</div><div class="t"><span>'+(cur!=null?cur+' kg':'—')+repTxt+' <span style="opacity:.6">w1 baseline</span></span><span>'+note+'</span></div>'+(goal?'<div class="trk"><span style="width:'+barpct+'%"></span></div>':'')+'</div>';}
+ var gchip=gap==null?(goal?'':'<span class="bdelta">own trend</span>'):(gap>0?'<span class="bdelta acc">→ '+(gap%1?gap.toFixed(1):gap)+' kg to '+goal+'</span>':(repGoal&&repsAt>=repGoal?'<span class="bdelta good">'+goal+' kg × '+repGoal+' ✓</span>':'<span class="bdelta acc">'+goal+' kg ✓ · reps '+repsAt+'/'+(repGoal||'?')+'</span>'));return '<div class="prog"><div class="pctl" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>'+label+(cap?' <span style="opacity:.6">'+cap+'</span>':'')+'</span>'+gchip+'</div><div class="t"><span>'+(cur!=null?cur+' kg':'—')+repTxt+(_last?' <span class="wtag">'+deriveWave(_last.date)+' · '+wdate(_last.date)+'</span>':'')+'</span><span>'+note+'</span></div>'+(goal?'<div class="trk"><span style="width:'+barpct+'%"></span></div>':'')+'</div>';}
 function cut(w){return w?new Date(now-w*DAY):null;}
 function isRow(t){var v=String(t&&t.type||'');return v==='Row'||v==='Rodd';}
 function fdate(a,c){return byd(a).filter(function(x){return !c||pd(x.date)>=c;});}
@@ -578,10 +606,10 @@ function stRow(name,f,pro,unit){var rows=byd(D.hyrox).filter(function(h){return 
  var trend=srs.length>1?('<div style="font-size:10px;color:var(--mut);margin-top:2px">'+srs[0].v+' → '+cur+' '+unit+' since start · +'+((cur-srs[0].v)%1?(cur-srs[0].v).toFixed(1):(cur-srs[0].v))+' added</div>'):'';
  return '<div class="prog"><div class="pctl" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b style="color:var(--ink)">'+name+'</b> <span style="opacity:.6">· start Pro '+pro+' '+unit+'</span></span>'+chip+'</div><div class="t" style="margin-top:2px"><span style="font-size:14px;font-weight:800">'+(cur!=null?cur+' '+unit:'—')+'</span>'+((bk&&vOn&&num(lastR.vest))?'<span style="font-size:10px;color:var(--mut)">'+bk+'</span>':'')+'</div>'+trend+(srs.length>1?bspark(srs,pro):'')+'</div>';}
 document.getElementById('chassis').innerHTML=[
-  panel('cha','Strength → HybridX Pro','Cycle baseline (w1) · goal = kg × reps capacity, not 1RM · ✓ when a logged session hits goal weight × goal reps (any set scheme)',
+  panel('cha','Strength → HybridX Pro','Latest session · compared to the same wave week last cycle · goal = kg × reps capacity, not 1RM · ✓ when a logged session hits goal weight × goal reps',
     waveLine('Deadlift',D.str,'dl',cfg.goals.dl,'×25','dlr')+waveLine('Strict press',D.str,'pr',cfg.goals.pr,'×25','prr')+waveLine('Back lunge',D.str,'bl',cfg.goals.bl,'×50','blr')
-    +'<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)">Accessories · own trend, no HybridX standard</div>'
-    +waveLine('Front squat',D.str,'fs',null,null,'fsr')
+    +'<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)">Accessories · no HybridX standard</div>'
+    +waveLine('Front squat',D.str,'fs',cfg.goals.fs,'×25','fsr')
     +waveLine('Bulgarian split squat',D.str,'bg',null,null,'bgr')
     +waveLine('Leg curl',D.str,'lc',null,null,'lcr')
     +waveLine('Leg extension',D.str,'le',null,null,'ler')),
