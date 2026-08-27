@@ -144,7 +144,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <div class="quote" id="quote"></div>
 <div class="foot" id="foot"></div></div><div id="tt"></div>
 <script>
-var BUILD="3.16 · 2026-08-27 · löpningen har en permanent plats i tröskeln (master §6: 68 % av gapet) · blocket styr ordningen, inte om kortet finns · rodd renderas inte alls";
+var BUILD="3.17 · 2026-08-27 · threshold_modalities avgör existens i varje datumläge — rodd ritas aldrig i tröskelsektionen, inte heller på deload · threshold_plan speglar master §6 vecka för vecka · död bench-modell struken";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -240,7 +240,7 @@ function wkIsDL(k){var d=isoMon(k);if(!d)return false;var td=d.toISOString().sli
 function spark(series,lower,cls,desc){series=(series||[]).map(function(o){return (o&&typeof o==='object')?o:{v:o,d:String(o),t:''};}).filter(function(o){return o.v!=null;});if(series.length<2)return '<span class="na">—</span>';var vals=series.map(function(o){return o.v;});var mn=Math.min.apply(0,vals),mx=Math.max.apply(0,vals),rng=(mx-mn)||1,h=cls==='bigspark'?56:26;var xy=series.map(function(o,i){return {x:i/(series.length-1)*100,y:(h-3)-((o.v-mn)/rng)*(h-6),o:o};});var poly=xy.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var imp=vals[vals.length-1]>vals[0];if(lower)imp=!imp;var c=imp?'var(--good)':'var(--warn)';var band=100/(series.length-1);var dots=xy.map(function(p){return '<rect x="'+(p.x-0.5).toFixed(1)+'" y="'+(p.y-2).toFixed(1)+'" width="1" height="4" fill="'+c+'"></rect>';}).join('');var hit=xy.map(function(p){return '<rect class="pt" x="'+Math.max(0,p.x-band/2).toFixed(1)+'" y="0" width="'+band.toFixed(1)+'" height="'+h+'" fill="transparent" data-d="'+String(p.o.d).replace(/"/g,'')+'" data-t="'+(p.o.t||'')+'" data-desc="'+(desc||'').replace(/"/g,'')+'"></rect>';}).join('');return '<svg class="'+(cls||'spark')+'" viewBox="0 0 100 '+h+'" preserveAspectRatio="none"><polyline points="'+poly+'" fill="none" stroke="'+c+'" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>'+dots+hit+'</svg>';}
 function arrow(vals,lower){vals=(vals||[]).map(function(o){return o&&typeof o==='object'?o.v:o;}).filter(function(v){return v!=null;});if(vals.length<2)return '';var imp=vals[vals.length-1]>vals[0];if(lower)imp=!imp;return '<span class="tr" style="color:'+(imp?'var(--good)':'var(--warn)')+'">'+(imp?'▲':'▼')+'</span>';}
 
-var CONFIG = {"races": [["2026-12-11", "Stockholm"], ["2027-03-25", "Copenhagen"], ["2027-04-16", "Helsinki"]], "phases": [["2026-07-13", "2026-07-19", "W29", "Deload"], ["2026-07-20", "2026-08-09", "W30-32", "Build"], ["2026-08-10", "2026-08-16", "W33", "Deload"], ["2026-08-17", "2026-09-06", "W34-36", "Build"], ["2026-09-07", "2026-09-13", "W37", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-09-14", "2026-10-04", "W38-40", "Build"], ["2026-10-05", "2026-10-11", "W41", "Deload+test", "FTP Bike (Tue) + 5K Run (Thu) · quarterly"], ["2026-10-12", "2026-11-01", "W42-44", "Build"], ["2026-11-02", "2026-11-08", "W45", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-11-09", "2026-11-29", "W46-48", "Build"], ["2026-11-30", "2026-12-11", "W49-50", "Taper"]], "goals": {"dl": 130, "fs": 80, "pr": 25, "bl": 25, "bg": 22.5, "cad": 170, "wb": 100, "wb_pr": 62, "volume": 55}, "threshold_modalities": ["Run", "Ski"], "bands": {"Ski": null, "Row": null, "Run": null}, "threshold_plan": [["2026-08-17", "2026-09-06", ["Ski"]], ["2026-09-14", "2026-10-04", ["Run", "Ski"]], ["2026-10-12", "2026-11-01", ["Run"]], ["2026-11-09", "2026-11-29", ["Run"]]], "rhr_base": 40, "bench": {"runpace": {"m1": 288, "m2": 269}, "ski": {"m1": 273, "m2": 260}, "wb": {"m1": 299, "m2": 270}}}; // plan data only — no health data in the public file
+var CONFIG = {"races": [["2026-12-11", "Stockholm"], ["2027-03-25", "Copenhagen"], ["2027-04-16", "Helsinki"]], "phases": [["2026-07-13", "2026-07-19", "W29", "Deload"], ["2026-07-20", "2026-08-09", "W30-32", "Build"], ["2026-08-10", "2026-08-16", "W33", "Deload"], ["2026-08-17", "2026-09-06", "W34-36", "Build"], ["2026-09-07", "2026-09-13", "W37", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-09-14", "2026-10-04", "W38-40", "Build"], ["2026-10-05", "2026-10-11", "W41", "Deload+test", "FTP Bike (Tue) + 5K Run (Thu) · quarterly"], ["2026-10-12", "2026-11-01", "W42-44", "Build"], ["2026-11-02", "2026-11-08", "W45", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-11-09", "2026-11-29", "W46-48", "Build"], ["2026-11-30", "2026-12-11", "W49-50", "Taper"]], "goals": {"dl": 130, "fs": 80, "pr": 25, "bl": 25, "bg": 22.5, "cad": 170, "wb": 100, "wb_pr": 62, "volume": 55}, "threshold_modalities": ["Run", "Ski"], "bands": {"Ski": null, "Run": null}, "threshold_plan": [["2026-08-17", "2026-09-06", ["Ski"]], ["2026-09-14", "2026-09-20", ["Run"]], ["2026-09-21", "2026-09-27", ["Ski"]], ["2026-09-28", "2026-10-04", ["Run"]], ["2026-10-12", "2026-11-01", ["Run"]], ["2026-11-09", "2026-11-29", ["Run"]]], "rhr_base": 40}; // plan data only — no health data in the public file
 // ═══ Datakontrakt mot arket (22 aug, schema v9) ═══════════════════════
 // MAP är ENDA källan för både adapt() och kolumnkontrollen. En kolumn som inte
 // står här läses inte av något kort; en kolumn som står här MÅSTE finnas i
@@ -622,15 +622,19 @@ function renderTrends(w){var c=cut(w);
  // senaste troskelpassen (18 och 25 aug) kordes 10/10 All Out. Domen tas darfor
  // pa pace OCH puls tillsammans, aldrig pa pace ensamt.
  //
- // URVALET OCH ORDNINGEN KOMMER UR CONFIG, VARDENA UR DATAN. `threshold_plan`
- // speglar master §6 (v.34-36 ski · v.38-40 varvat · v.42+ run). BARA blockets
- // modaliteter renderas — master: "ski och lopning, INGET ANNAT". Allt annat
- // faller bort har; rodd-raderna ar sanna som loggade och ligger kvar i ARKET,
+ // URVALET OCH ORDNINGEN KOMMER UR CONFIG, VARDENA UR DATAN — men ur TVA
+ // OLIKA LISTOR. `threshold_modalities` avgor vilka kort som OVERHUVUDTAGET
+ // finns, i VARJE datumlage; `threshold_plan` avgor bara ordningen och vad
+ // kortet SAGER. Master §6: "ski och lopning, INGET ANNAT" — rodd star inte i
+ // `threshold_modalities` och ritas darfor aldrig har, inte heller pa en
+ // deloadvecka. Rodd-raderna ar sanna som loggade och ligger kvar i ARKET,
  // men de hor hemma i lins 2 (2K rodd), aldrig pa troskelraden.
- // Mekaniken ar CONFIG, ALDRIG en if(type==='Row') — skrivs rodd in i planen
- // igen renderas den igen utan att en kodrad ror sig.
- // Ligger dagens datum mellan tva block (deload) galler ingen plan, och da
- // renderas det som faktiskt loggats.
+ // Mekaniken ar CONFIG, ALDRIG en if(type==='Row') — skrivs rodd in i
+ // `threshold_modalities` igen renderas den igen utan att en kodrad ror sig.
+ // Ligger dagens datum mellan tva block (deload) galler ingen plan. DA — och
+ // bara da — styr planen ingenting: korten ligger i CONFIG-ordning och sager
+ // att ingen modalitet ar i plan. Att ingen plan galler UTVIDGAR ALDRIG vilka
+ // modaliteter som ritas.
  function planMods(){
    var td=new Date(now).toISOString().slice(0,10);
    var b=(cfg.threshold_plan||[]).filter(function(p){return td>=p[0]&&td<=p[1];})[0];
@@ -648,7 +652,15 @@ function renderTrends(w){var c=cut(w);
    var by={};
    rows.forEach(function(t){var k=String(t.type).trim();(by[k]=by[k]||[]).push(t);});
    var plan=planMods();
-   return Object.keys(by).filter(function(k){return THR_MODES[k];})
+   // EXISTENS KOMMER UR `threshold_modalities`, ORDNING UR `threshold_plan`.
+   // Tva listor, tva olika jobb (master §6). Filtret sitter HAR och inte i
+   // planCards(), sa BADA konsumenterna — pace-korten OCH band adherence —
+   // far samma urval. Lag det bara i planCards() slank rodd in i bandkortet
+   // sa fort ingen plan gallde (deloadvecka): `inPlan:!plan||...` gjorde da
+   // varje modalitet med loggade rader in-plan. Att ingen plan galler far
+   // ALDRIG utvidga vilka modaliteter som ritas.
+   var exist=(cfg.threshold_modalities||[]);
+   return Object.keys(by).filter(function(k){return THR_MODES[k]&&exist.indexOf(k)>=0;})
      .map(function(k){
        var M=THR_MODES[k],all=by[k],ls=last(all),struct=ls.ints+'×'+ls.len;
        // STRUKTUR AVGOR JAMFORBARHETEN. Serien innehol 5x6, 3x10 OCH deload-2x10,
@@ -782,8 +794,9 @@ function renderTrends(w){var c=cut(w);
  // Att de historiska Row-raderna ligger kvar galler ARKET ("de skrivs aldrig om"),
  // inte den har vyn. Rodd-2K syns dar den hor hemma, i lins 2-korten.
  // MEKANIKEN AR FORTFARANDE CONFIG, ALDRIG EN if(type==='Row'): allt som inte
- // star i CONFIG.threshold_plan faller bort har. Skrivs rodd nagon gang in i
- // planen igen renderas den igen, utan att en kodrad ror sig.
+ // star i CONFIG.threshold_modalities faller bort redan i thrBlocks(), i varje
+ // datumlage. Skrivs rodd nagon gang in i den listan igen renderas den igen,
+ // utan att en kodrad ror sig.
 
 var _zm=zoneMins(c);var _zt=_zm.reduce(function(a,b){return a+b;},0)||1;var _z24=Math.round((_zm[2]+_zm[4])/_zt*100);var zoneBody=zoneWidget(_zm)+'<div class="foot-note">'+(_zt>1?((_zt/60).toFixed(1)+' h from logged zone splits'):'No zone split logged yet')+(_zm.skipped?(' · '+_zm.skipped+' session'+(_zm.skipped===1?'':'s')+' without split — not counted'):' · every session has a split')+'</div>';document.getElementById('lens3eng').innerHTML=planCards().concat([
  panel('eng','Threshold — band adherence','Held the band · spread between intervals · metres are a readout',bandBody),
@@ -1166,6 +1179,15 @@ function selftest(raw){
     for(var i=1;i<b.length;i++) if(b[i][0]<=b[i-1][1])
       return {ok:false, note:b[i-1][2].join('/')+' och '+b[i][2].join('/')+' överlappar vid '+b[i][0]};
     return {ok:true, note:b.length?(b[0][0]+' → '+b[b.length-1][1]):'ingen plan satt'}; });
+  t('Bara CONFIG.threshold_modalities får en plats i tröskelsektionen', function(){
+    var mods=(CONFIG.threshold_modalities||[]);
+    var bad=[];
+    (CONFIG.threshold_plan||[]).forEach(function(b){(b[2]||[]).forEach(function(m){
+      if(mods.indexOf(m)<0&&bad.indexOf(m)<0)bad.push(m);});});
+    Object.keys(CONFIG.bands||{}).forEach(function(k){
+      if(mods.indexOf(k)<0&&bad.indexOf(k)<0)bad.push(k);});
+    return bad.length ? {ok:false, note:'utanför threshold_modalities: '+bad.join(', ')}
+      : {ok:true, note:mods.join(' · ')+' — plan och band håller sig innanför'}; });
   t('Framsteg mäts mot pulsen, inte bara pace', function(){
     var M=THR_MODES.Ski;
     var mk=function(p1,h1,p0,h0){return {M:M, last:{'pace':p1,bpm:h1}, prev:{'pace':p0,bpm:h0,date:'2026-01-01'}};};
