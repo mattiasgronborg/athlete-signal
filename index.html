@@ -144,7 +144,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <div class="quote" id="quote"></div>
 <div class="foot" id="foot"></div></div><div id="tt"></div>
 <script>
-var BUILD="3.14 · 2026-08-27 · tröskeln svarar 'snabbare till lägre kostnad' · pace + puls i samma dom · blockets modaliteter ur CONFIG · off-plan demoteras, raderas aldrig";
+var BUILD="3.15 · 2026-08-27 · tröskeln = ski och löpning, inget annat (master §6) · väntande plats för modalitet planen kräver · pace + puls i samma dom";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -679,7 +679,51 @@ function renderTrends(w){var c=cut(w);
  function bandOf(k){var b=(cfg.bands||{})[k];return (b&&b.lo&&b.hi&&psec(b.lo)!=null&&psec(b.hi)!=null)?{lo:psec(b.lo),hi:psec(b.hi),txt:b.lo+'–'+b.hi}:null;}
  var thrAll=thrBlocks();
  var thrB=thrAll.filter(function(b){return b.inPlan;});
- var thrOff=thrAll.filter(function(b){return !b.inPlan;});
+ // EN MODALITET SOM PLANEN KRAVER MEN SOM SAKNAR RADER ar inte "ingenting" —
+ // dess FRANVARO ar information. Regeln "modalitet utan rader ritas inte alls"
+ // galler modaliteter planen inte tranar; en som blocket bygger far en vantande
+ // plats som sager vad som ska loggas, sa kortet FYLLS i stallet for att dyka upp.
+ // Utan den syntes inte att halva v.38-40-planen (run) var otranad.
+ var _have={}; thrAll.forEach(function(b){_have[b.key]=1;});
+ var thrWait=(planMods()||[]).filter(function(m){return THR_MODES[m]&&!_have[m];});
+ function paceCard(b){
+   var srs=thrSeries(b);
+   var v=costVerdict(b);
+   var notes=[];
+   if(v.delta)notes.push(v.delta+' vs '+String(b.prev.date).slice(5));
+   if(v.why)notes.push('<span class="nain">'+v.why+'</span>');
+   notes.push(spanTxt(b));
+   if(b.dropped)notes.push(b.dropped+' on another structure — not plotted');
+   var hr=num(b.last.bpm);
+   return mpanel('eng','Threshold '+b.M.label+' — pace at cost',
+     b.struct+(b.ctrl!=null?' · '+b.M.ctrlTxt(b.ctrl):'')+' · faster at the same or lower HR = progress',
+     ((last(srs)||{}).v==null?'—':mmss((last(srs)||{}).v)+(hr!=null?'<small> @ '+hr+' bpm</small>':'<small> @ — bpm</small>')),
+     v.txt?{cls:v.cls,txt:v.txt}:null,
+     srs,bestOf(srs,true),
+     bspark(srs,bestOf(srs,true))+'<div class="foot-note">'+notes.join(' · ')+'</div>',
+     b.M.label+' threshold pace per '+(b.M.unit==='/km'?'km':'500 m')+' read against its cost. Master: progress is the same pace at a LOWER heart rate — pace alone can be bought with effort. Only sessions on the same structure ('+b.struct+') are compared; modalities are never mixed.');
+ }
+ function waitCard(m){
+   var M=THR_MODES[m];
+   var need=(M.ctrl==='drag'?'pace /500m · avg watt · drag factor':'pace /km · incline · cadence');
+   return panel('eng','Threshold '+M.label+' — pace at cost',
+     'In this block’s plan · awaiting the first session',
+     '<div class="na">No '+M.label+' threshold logged in this block yet</div>'
+     +'<div class="foot-note">Log '+need+' · interval splits · effort · avg HR · zone split — the card fills itself, nothing to build.</div>');
+ }
+ // Planens ordning styr raden. Ett vantekort tar modalitetens plats tills den
+ // forsta raden landar, sa den som ligger forst i planen ocksa ligger forst i vyn.
+ function planCards(){
+   var plan=planMods();
+   if(!plan) return thrB.map(paceCard);   // deloadvecka: ingen plan, ingen dom
+   var out=[];
+   plan.forEach(function(m){
+     if(!THR_MODES[m]) return;
+     var b=thrB.filter(function(x){return x.key===m;})[0];
+     out.push(b?paceCard(b):waitCard(m));
+   });
+   return out;
+ }
  var uncal=[];
  var bandBody=thrB.length?thrB.map(function(b){
    var sp=spreadOf(b.last),bd=bandOf(b.key),ef=num(b.last.effort);
@@ -710,48 +754,26 @@ function renderTrends(w){var c=cut(w);
      +head
      +(notes.length?'<div class="foot-note">'+notes.join(' · ')+'</div>':'')
      +'<div class="foot-note">'+ctrlTag(b)+(read.length?' · '+read.join(' · ')+' — a readout, never the target':'')+'</div></div>';
- }).join(''):'<div class="na">No threshold session logged for this block\'s modalities.</div>';
+ }).join(''):'<div class="na">No '+((planMods()||[]).join(' · ')||'threshold')+' session logged in this block yet — the band check runs on the first one.</div>';
  // Skalet sags EN gang per kort, inte en gang per modalitet: tre identiska rader
  // om samma sak laser man forbi, och da forsvinner det som faktiskt star dar.
  if(uncal.length)bandBody+='<div class="foot-note">Band not calibrated for '+uncal.join(' · ')
    +' — the spread is the signal until one calibration session per modality writes the band into master.</div>';
- // ALSO LOGGED — modaliteter som ligger UTANFOR blockets plan. Demoterade till en
- // rad, utan PR-chip: de ar sanna som loggade men de ar inte det vi tranar nu.
- // Kortet ritas bara nar det finns nagot att visa, och forsvinner av sig sjalvt.
- var offBody=thrOff.map(function(b){
-   var pv=psec(b.last[b.M.pace]);
-   return '<div class="kv" style="margin-bottom:7px"><span class="kvl">'+b.M.label+' · '+b.struct+'</span>'
-     +'<span style="font-size:12px;font-weight:700">'+(pv!=null?mmss(pv)+' '+b.M.unit:'—')+'</span></div>'
-     +'<div class="foot-note" style="margin-bottom:11px">'+String(b.last.date).slice(5)+' · '+spanTxt(b)+'</div>';
- }).join('');
+ // MASTER §6: "Trosk el kors pa ski och lopning. INGET ANNAT." Rodd ar aldrig ett
+ // troskelstimulus — den lever som lins 2-test (2K pa standarddeload). Alltsa
+ // renderas den inte har: inget kort, ingen rad, ingen fotnot.
+ // Att de historiska Row-raderna ligger kvar galler ARKET ("de skrivs aldrig om"),
+ // inte den har vyn. Rodd-2K syns dar den hor hemma, i lins 2-korten.
+ // MEKANIKEN AR FORTFARANDE CONFIG, ALDRIG EN if(type==='Row'): allt som inte
+ // star i CONFIG.threshold_plan faller bort har. Skrivs rodd nagon gang in i
+ // planen igen renderas den igen, utan att en kodrad ror sig.
 
-var _zm=zoneMins(c);var _zt=_zm.reduce(function(a,b){return a+b;},0)||1;var _z24=Math.round((_zm[2]+_zm[4])/_zt*100);var zoneBody=zoneWidget(_zm)+'<div class="foot-note">'+(_zt>1?((_zt/60).toFixed(1)+' h from logged zone splits'):'No zone split logged yet')+(_zm.skipped?(' · '+_zm.skipped+' session'+(_zm.skipped===1?'':'s')+' without split — not counted'):' · every session has a split')+'</div>';document.getElementById('lens3eng').innerHTML=[].concat(thrB.map(function(b){
-   var srs=thrSeries(b);
-   var v=costVerdict(b);
-   var notes=[];
-   if(v.delta)notes.push(v.delta+' vs '+String(b.prev.date).slice(5));
-   if(v.why)notes.push('<span class="nain">'+v.why+'</span>');
-   notes.push(spanTxt(b));
-   if(b.dropped)notes.push(b.dropped+' on another structure — not plotted');
-   var hr=num(b.last.bpm);
-   return mpanel('eng','Threshold '+b.M.label+' — pace at cost',
-     b.struct+(b.ctrl!=null?' · '+b.M.ctrlTxt(b.ctrl):'')+' · faster at the same or lower HR = progress',
-     ((last(srs)||{}).v==null?'—':mmss((last(srs)||{}).v)+(hr!=null?'<small> @ '+hr+' bpm</small>':'<small> @ — bpm</small>')),
-     v.txt?{cls:v.cls,txt:v.txt}:null,
-     srs,bestOf(srs,true),
-     bspark(srs,bestOf(srs,true))+'<div class="foot-note">'+notes.join(' · ')+'</div>',
-     b.M.label+' threshold pace per '+(b.M.unit==='/km'?'km':'500 m')+' read against its cost. Master: progress is the same pace at a LOWER heart rate — pace alone can be bought with effort. Only sessions on the same structure ('+b.struct+') are compared; modalities are never mixed.');
- })).concat([
-  panel('eng','Threshold — band adherence','Held the band · spread between intervals · metres are a readout',bandBody),
-  (thrOff.length?panel('eng','Also logged','Outside this block’s threshold plan · shown, never scored',
-     offBody+'<div class="foot-note">The plan trains '+((planMods()||[]).join(' · ')||'—')
-       +' in this block (master §6). True as logged and kept visible — just not what the block is building. Change the plan in master and in CONFIG.threshold_plan and these move up on their own.</div>'):''),
+var _zm=zoneMins(c);var _zt=_zm.reduce(function(a,b){return a+b;},0)||1;var _z24=Math.round((_zm[2]+_zm[4])/_zt*100);var zoneBody=zoneWidget(_zm)+'<div class="foot-note">'+(_zt>1?((_zt/60).toFixed(1)+' h from logged zone splits'):'No zone split logged yet')+(_zm.skipped?(' · '+_zm.skipped+' session'+(_zm.skipped===1?'':'s')+' without split — not counted'):' · every session has a split')+'</div>';document.getElementById('lens3eng').innerHTML=planCards().concat([
+ panel('eng','Threshold — band adherence','Held the band · spread between intervals · metres are a readout',bandBody),
   mpanel('eng','Roncevic total','Race-sim · training side · vs your best',mmss((last(rt)||{}).v),chipBest(rt,true),rt,bestOf(rt,true),null,'Roncevic race-sim total — training data, never compared to race goals.'),
   (function(){var vp=fdate(D.vo2||[],c).filter(function(x){return psec(x.pace)!=null;}).map(function(x){return P(psec(x.pace),mmss(psec(x.pace))+' /km',x.date);});
    if(vp.length)return panel('eng','VO2 / intervals — pace','Z5–6 · lower is faster',bigspark(vp,true,'VO2 interval pace per km — lower is faster.'));
-   // Platshallaren namner bara det som FAKTISKT inte ar loggat an. Den sa
-   // "Run threshold /km — Phase 2" langt efter att lop-troskeln blivit forstaklass.
-   if(thrAll.length)return '';
+   if(thrAll.length||thrWait.length)return '';
    return panel('eng','Coming next','Slots open when first logged','<div class="na" style="padding:8px 0;line-height:1.9">Threshold — when the first session is logged<br>VO2 intervals — when programmed</div>');})()
  ]).join('');
 document.getElementById('engine').innerHTML=[
