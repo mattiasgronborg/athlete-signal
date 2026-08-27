@@ -144,7 +144,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <div class="quote" id="quote"></div>
 <div class="foot" id="foot"></div></div><div id="tt"></div>
 <script>
-var BUILD="3.15 · 2026-08-27 · tröskeln = ski och löpning, inget annat (master §6) · väntande plats för modalitet planen kräver · pace + puls i samma dom";
+var BUILD="3.16 · 2026-08-27 · löpningen har en permanent plats i tröskeln (master §6: 68 % av gapet) · blocket styr ordningen, inte om kortet finns · rodd renderas inte alls";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -240,7 +240,7 @@ function wkIsDL(k){var d=isoMon(k);if(!d)return false;var td=d.toISOString().sli
 function spark(series,lower,cls,desc){series=(series||[]).map(function(o){return (o&&typeof o==='object')?o:{v:o,d:String(o),t:''};}).filter(function(o){return o.v!=null;});if(series.length<2)return '<span class="na">—</span>';var vals=series.map(function(o){return o.v;});var mn=Math.min.apply(0,vals),mx=Math.max.apply(0,vals),rng=(mx-mn)||1,h=cls==='bigspark'?56:26;var xy=series.map(function(o,i){return {x:i/(series.length-1)*100,y:(h-3)-((o.v-mn)/rng)*(h-6),o:o};});var poly=xy.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var imp=vals[vals.length-1]>vals[0];if(lower)imp=!imp;var c=imp?'var(--good)':'var(--warn)';var band=100/(series.length-1);var dots=xy.map(function(p){return '<rect x="'+(p.x-0.5).toFixed(1)+'" y="'+(p.y-2).toFixed(1)+'" width="1" height="4" fill="'+c+'"></rect>';}).join('');var hit=xy.map(function(p){return '<rect class="pt" x="'+Math.max(0,p.x-band/2).toFixed(1)+'" y="0" width="'+band.toFixed(1)+'" height="'+h+'" fill="transparent" data-d="'+String(p.o.d).replace(/"/g,'')+'" data-t="'+(p.o.t||'')+'" data-desc="'+(desc||'').replace(/"/g,'')+'"></rect>';}).join('');return '<svg class="'+(cls||'spark')+'" viewBox="0 0 100 '+h+'" preserveAspectRatio="none"><polyline points="'+poly+'" fill="none" stroke="'+c+'" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>'+dots+hit+'</svg>';}
 function arrow(vals,lower){vals=(vals||[]).map(function(o){return o&&typeof o==='object'?o.v:o;}).filter(function(v){return v!=null;});if(vals.length<2)return '';var imp=vals[vals.length-1]>vals[0];if(lower)imp=!imp;return '<span class="tr" style="color:'+(imp?'var(--good)':'var(--warn)')+'">'+(imp?'▲':'▼')+'</span>';}
 
-var CONFIG = {"races": [["2026-12-11", "Stockholm"], ["2027-03-25", "Copenhagen"], ["2027-04-16", "Helsinki"]], "phases": [["2026-07-13", "2026-07-19", "W29", "Deload"], ["2026-07-20", "2026-08-09", "W30-32", "Build"], ["2026-08-10", "2026-08-16", "W33", "Deload"], ["2026-08-17", "2026-09-06", "W34-36", "Build"], ["2026-09-07", "2026-09-13", "W37", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-09-14", "2026-10-04", "W38-40", "Build"], ["2026-10-05", "2026-10-11", "W41", "Deload+test", "FTP Bike (Tue) + 5K Run (Thu) · quarterly"], ["2026-10-12", "2026-11-01", "W42-44", "Build"], ["2026-11-02", "2026-11-08", "W45", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-11-09", "2026-11-29", "W46-48", "Build"], ["2026-11-30", "2026-12-11", "W49-50", "Taper"]], "goals": {"dl": 130, "fs": 80, "pr": 25, "bl": 25, "bg": 22.5, "cad": 170, "wb": 100, "wb_pr": 62, "volume": 55}, "bands": {"Ski": null, "Row": null, "Run": null}, "threshold_plan": [["2026-08-17", "2026-09-06", ["Ski"]], ["2026-09-14", "2026-10-04", ["Run", "Ski"]], ["2026-10-12", "2026-11-01", ["Run"]], ["2026-11-09", "2026-11-29", ["Run"]]], "rhr_base": 40, "bench": {"runpace": {"m1": 288, "m2": 269}, "ski": {"m1": 273, "m2": 260}, "wb": {"m1": 299, "m2": 270}}}; // plan data only — no health data in the public file
+var CONFIG = {"races": [["2026-12-11", "Stockholm"], ["2027-03-25", "Copenhagen"], ["2027-04-16", "Helsinki"]], "phases": [["2026-07-13", "2026-07-19", "W29", "Deload"], ["2026-07-20", "2026-08-09", "W30-32", "Build"], ["2026-08-10", "2026-08-16", "W33", "Deload"], ["2026-08-17", "2026-09-06", "W34-36", "Build"], ["2026-09-07", "2026-09-13", "W37", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-09-14", "2026-10-04", "W38-40", "Build"], ["2026-10-05", "2026-10-11", "W41", "Deload+test", "FTP Bike (Tue) + 5K Run (Thu) · quarterly"], ["2026-10-12", "2026-11-01", "W42-44", "Build"], ["2026-11-02", "2026-11-08", "W45", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-11-09", "2026-11-29", "W46-48", "Build"], ["2026-11-30", "2026-12-11", "W49-50", "Taper"]], "goals": {"dl": 130, "fs": 80, "pr": 25, "bl": 25, "bg": 22.5, "cad": 170, "wb": 100, "wb_pr": 62, "volume": 55}, "threshold_modalities": ["Run", "Ski"], "bands": {"Ski": null, "Row": null, "Run": null}, "threshold_plan": [["2026-08-17", "2026-09-06", ["Ski"]], ["2026-09-14", "2026-10-04", ["Run", "Ski"]], ["2026-10-12", "2026-11-01", ["Run"]], ["2026-11-09", "2026-11-29", ["Run"]]], "rhr_base": 40, "bench": {"runpace": {"m1": 288, "m2": 269}, "ski": {"m1": 273, "m2": 260}, "wb": {"m1": 299, "m2": 270}}}; // plan data only — no health data in the public file
 // ═══ Datakontrakt mot arket (22 aug, schema v9) ═══════════════════════
 // MAP är ENDA källan för både adapt() och kolumnkontrollen. En kolumn som inte
 // står här läses inte av något kort; en kolumn som står här MÅSTE finnas i
@@ -636,6 +636,13 @@ function renderTrends(w){var c=cut(w);
    var b=(cfg.threshold_plan||[]).filter(function(p){return td>=p[0]&&td<=p[1];})[0];
    return b?b[2]:null;
  }
+ // Nasta block som tranar modaliteten — sa vantekortet kan saga NAR den startar
+ // i stallet for bara att den saknas.
+ function nextBlockFor(m){
+   var td=new Date(now).toISOString().slice(0,10);
+   return (cfg.threshold_plan||[]).filter(function(p){return (p[2]||[]).indexOf(m)>=0&&p[1]>=td;})
+     .sort(function(x,y){return x[0]<y[0]?-1:1;})[0]||null;
+ }
  function thrBlocks(){
    var rows=fdate(D.thr,c).filter(function(t){return t.type&&String(t.type).trim()&&!isDL(t.date);});
    var by={};
@@ -686,8 +693,6 @@ function renderTrends(w){var c=cut(w);
  // galler modaliteter planen inte tranar; en som blocket bygger far en vantande
  // plats som sager vad som ska loggas, sa kortet FYLLS i stallet for att dyka upp.
  // Utan den syntes inte att halva v.38-40-planen (run) var otranad.
- var _have={}; thrAll.forEach(function(b){_have[b.key]=1;});
- var thrWait=(planMods()||[]).filter(function(m){return THR_MODES[m]&&!_have[m];});
  function paceCard(b){
    var srs=thrSeries(b);
    var v=costVerdict(b);
@@ -705,26 +710,36 @@ function renderTrends(w){var c=cut(w);
      bspark(srs,bestOf(srs,true))+'<div class="foot-note">'+notes.join(' · ')+'</div>',
      b.M.label+' threshold pace per '+(b.M.unit==='/km'?'km':'500 m')+' read against its cost. Master: progress is the same pace at a LOWER heart rate — pace alone can be bought with effort. Only sessions on the same structure ('+b.struct+') are compared; modalities are never mixed.');
  }
- function waitCard(m){
+ function waitCard(m,inPlan){
    var M=THR_MODES[m];
    var need=(M.ctrl==='drag'?'pace /500m · avg watt · drag factor':'pace /km · incline · cadence');
-   return panel('eng','Threshold '+M.label+' — pace at cost',
-     'In this block’s plan · awaiting the first session',
-     '<div class="na">No '+M.label+' threshold logged in this block yet</div>'
+   var nb=inPlan?null:nextBlockFor(m);
+   var sub=inPlan?'In this block’s plan · awaiting the first session'
+     :(nb?('Not trained in this block · starts '+wdate(nb[0])):'Not in the plan right now');
+   return panel('eng','Threshold '+M.label+' — pace at cost', sub,
+     '<div class="na">No '+M.label+' threshold logged yet</div>'
      +'<div class="foot-note">Log '+need+' · interval splits · effort · avg HR · zone split — the card fills itself, nothing to build.</div>');
  }
- // Planens ordning styr raden. Ett vantekort tar modalitetens plats tills den
- // forsta raden landar, sa den som ligger forst i planen ocksa ligger forst i vyn.
+ // BADA TROSKELMODALITETERNA HAR ALLTID EN PLATS. Master §6: "Trosk el kors pa ski
+ // OCH lopning" — och "LOPNINGEN VAGER TYNGST … prioritera aldrig ski over lopning
+ // i troskelarbetet" (68 % av det jamforbara gapet mot sub 1:10). En sektion som
+ // inte namner lopningen pa atta veckor bara for att blocket kor ski motsager den
+ // prioriteringen. Blocket styr ORDNINGEN och vad kortet SAGER, inte om det finns.
+ // Modaliteterna star i CONFIG.threshold_modalities — allt utanfor den listan
+ // (rodd) renderas inte alls.
  function planCards(){
-   var plan=planMods();
-   if(!plan) return thrB.map(paceCard);   // deloadvecka: ingen plan, ingen dom
-   var out=[];
-   plan.forEach(function(m){
-     if(!THR_MODES[m]) return;
-     var b=thrB.filter(function(x){return x.key===m;})[0];
-     out.push(b?paceCard(b):waitCard(m));
+   var mods=(cfg.threshold_modalities||[]).filter(function(m){return THR_MODES[m];});
+   var plan=planMods()||[];
+   var ord=mods.slice().sort(function(a,b){
+     var ia=plan.indexOf(a), ib=plan.indexOf(b);
+     if((ia<0)!==(ib<0)) return ia<0?1:-1;                  // blockets modaliteter forst
+     if(ia>=0&&ia!==ib) return ia-ib;                       // sedan planens ordning
+     return mods.indexOf(a)-mods.indexOf(b);                // annars CONFIG-ordningen
    });
-   return out;
+   return ord.map(function(m){
+     var b=thrB.concat(thrAll.filter(function(x){return x.key===m;})).filter(function(x){return x.key===m;})[0];
+     return b?paceCard(b):waitCard(m,plan.indexOf(m)>=0);
+   });
  }
  var uncal=[];
  var bandBody=thrB.length?thrB.map(function(b){
@@ -775,8 +790,10 @@ var _zm=zoneMins(c);var _zt=_zm.reduce(function(a,b){return a+b;},0)||1;var _z24
   mpanel('eng','Roncevic total','Race-sim · training side · vs your best',mmss((last(rt)||{}).v),chipBest(rt,true),rt,bestOf(rt,true),null,'Roncevic race-sim total — training data, never compared to race goals.'),
   (function(){var vp=fdate(D.vo2||[],c).filter(function(x){return psec(x.pace)!=null;}).map(function(x){return P(psec(x.pace),mmss(psec(x.pace))+' /km',x.date);});
    if(vp.length)return panel('eng','VO2 / intervals — pace','Z5–6 · lower is faster',bigspark(vp,true,'VO2 interval pace per km — lower is faster.'));
-   if(thrAll.length||thrWait.length)return '';
-   return panel('eng','Coming next','Slots open when first logged','<div class="na" style="padding:8px 0;line-height:1.9">Threshold — when the first session is logged<br>VO2 intervals — when programmed</div>');})()
+   // Samma vantelage som troskelkorten: platsen finns, och den sager vad som saknas.
+   // Gamla "Coming next" listade troskeln som en framtida fas — den har nu egna
+   // kort som sager sitt eget lage, sa platshallaren galler bara VO2.
+   return panel('eng','VO2 / intervals — pace','Not programmed yet','<div class="na">No VO2 session logged</div>');})()
  ]).join('');
 document.getElementById('engine').innerHTML=[
   (function(){var cw=iso(now);var comp=vkk.filter(function(k){return k<cw;});var lastC=comp.length?vv[comp[comp.length-1]]:null;var sofar=vv[cw]!=null?vv[cw]:0;
