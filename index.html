@@ -622,13 +622,15 @@ function renderTrends(w){var c=cut(w);
  // senaste troskelpassen (18 och 25 aug) kordes 10/10 All Out. Domen tas darfor
  // pa pace OCH puls tillsammans, aldrig pa pace ensamt.
  //
- // Modaliteterna kommer ur DATAN, ordningen ur CONFIG. `threshold_plan` speglar
- // master §6 (v.34-36 ski · v.38-40 varvat · v.42+ run). Blockets modaliteter far
- // fulla kort; allt annat som loggats hamnar i "Also logged" — demoterat, aldrig
- // raderat. En rad som motsager planen ar information, och en hardkodad
- // if(type==='Row') vore samma dod-vakt-monster som ENUMS-nyckeln 'Bike'.
- // Ligger dagens datum mellan tva block (deload) demoteras INGENTING — utan
- // grund i planen far kortet inte pasta att nagot ar off-plan.
+ // URVALET OCH ORDNINGEN KOMMER UR CONFIG, VARDENA UR DATAN. `threshold_plan`
+ // speglar master §6 (v.34-36 ski · v.38-40 varvat · v.42+ run). BARA blockets
+ // modaliteter renderas — master: "ski och lopning, INGET ANNAT". Allt annat
+ // faller bort har; rodd-raderna ar sanna som loggade och ligger kvar i ARKET,
+ // men de hor hemma i lins 2 (2K rodd), aldrig pa troskelraden.
+ // Mekaniken ar CONFIG, ALDRIG en if(type==='Row') — skrivs rodd in i planen
+ // igen renderas den igen utan att en kodrad ror sig.
+ // Ligger dagens datum mellan tva block (deload) galler ingen plan, och da
+ // renderas det som faktiskt loggats.
  function planMods(){
    var td=new Date(now).toISOString().slice(0,10);
    var b=(cfg.threshold_plan||[]).filter(function(p){return td>=p[0]&&td<=p[1];})[0];
