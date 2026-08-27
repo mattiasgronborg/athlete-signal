@@ -133,7 +133,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <h2 class="sl">This week — following the plan <span class="q">The lamps</span></h2>
 <div class="card" data-desc="This week's key sessions — matched by content, lit when done."><div id="wtype" style="margin-bottom:9px;font-size:10px;color:var(--mut)"></div><div class="lamps" id="lamps"></div><div id="z2wk" style="margin-top:11px"></div><div class="rules" id="rules"></div></div>
 <h2 class="sl">Body — recovery <span class="q">Behind the morning signal</span></h2><div class="grid three" id="body"></div>
-<h2 class="sl">Lens 3 · Key sessions — this week's signal <span class="q">Weekly evaluation · noisy, read as direction</span></h2>
+<h2 class="sl">Lens 3 · Key sessions — direction <span class="q">Every logged session · noisy, read as direction — not a weekly snapshot</span></h2>
 <h3 style="font-size:12px;color:var(--acc);margin:4px 0 8px">Engine — threshold &amp; race-sim</h3><div class="grid three" id="lens3eng"></div>
 <h3 style="font-size:12px;color:var(--acc2);margin:18px 0 8px">Chassis — strength &amp; stations</h3><div class="grid three" id="chassis"></div>
 <h2 class="sl">Base &amp; engine volume <span class="q">Monitoring — not a lens, just the work</span></h2><div class="grid three" id="engine"></div>
@@ -144,7 +144,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <div class="quote" id="quote"></div>
 <div class="foot" id="foot"></div></div><div id="tt"></div>
 <script>
-var BUILD="3.13 · 2026-08-27 · tröskeln på två modaliteter · korten drivs av loggad data, inte av planen · band adherence ersatte meters to beat";
+var BUILD="3.14 · 2026-08-27 · tröskeln svarar 'snabbare till lägre kostnad' · pace + puls i samma dom · blockets modaliteter ur CONFIG · off-plan demoteras, raderas aldrig";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -195,6 +195,39 @@ function splitList(v){
           .filter(function(x){return x!=null;});
   return xs.length?xs:null;
 }
+// DOMEN: pace OCH puls tillsammans. Master's definition av framsteg ar "samma
+// fart till lagre puls" — alltsa maste kostnaden alltid med. Saknas puls pa
+// nagon av de tva passen sags DET; en halv jamforelse ar ingen jamforelse.
+// Snittpulsen pa ett troskelpass innehaller uppvarmning och vila. Den ar darfor
+// bara jamforbar mot ett pass med SAMMA struktur — vilket ar precis det urval
+// `comp` gor.
+function costVerdict(b){
+  if(!b.prev) return {cls:'acc', txt:'first on this structure'};
+  var p1=psec(b.last[b.M.pace]), p0=psec(b.prev[b.M.pace]);
+  var h1=num(b.last.bpm), h0=num(b.prev.bpm);
+  if(p1==null||p0==null) return {cls:'', txt:'pace missing'};
+  if(h1==null||h0==null) return {cls:'', txt:'cost unknown',
+    why:'Avg HR missing on '+(h1==null?'this':'the previous')+' session — pace alone cannot say whether it got cheaper'};
+  var dp=p1-p0, dh=h1-h0, pTol=p0*0.01;
+  var faster=dp<-pTol, slower=dp>pTol, cheaper=dh<-2, dearer=dh>2;
+  var d=(dp<0?'−':'+')+mmss(Math.abs(dp))+' · '+(dh<0?'−':'+')+Math.abs(Math.round(dh))+' bpm';
+  if(faster&&cheaper)  return {cls:'good', txt:'faster at lower cost', delta:d};
+  if(faster&&dearer)   return {cls:'acc',  txt:'faster, paid for',     delta:d};
+  if(faster)           return {cls:'good', txt:'faster, same cost',    delta:d};
+  if(slower&&cheaper)  return {cls:'',     txt:'easier, slower',       delta:d};
+  if(slower)           return {cls:'warn', txt:'slower',               delta:d};
+  if(cheaper)          return {cls:'good', txt:'same pace, lower cost',delta:d};
+  if(dearer)           return {cls:'warn', txt:'same pace, higher cost',delta:d};
+  return {cls:'', txt:'unchanged', delta:d};
+}
+// SPRIDNINGEN MELLAN INTERVALLERNA — troskelpassets viktigaste tal. Den gar inte
+// att rakna ur ett snitt, darfor kolumnen `Interval splits` (schema v10).
+function spreadOf(t){
+  var xs=splitList(t&&t.splits); if(!xs||xs.length<2)return null;
+  var mn=Math.min.apply(0,xs),mx=Math.max.apply(0,xs);
+  var mean=xs.reduce(function(a,b){return a+b;},0)/xs.length;
+  return {n:xs.length,min:mn,max:mx,range:mx-mn,mean:mean,pct:mean?(mx-mn)/mean*100:null,vals:xs};
+}
 
 function last(a){return a.length?a[a.length-1]:null;}
 function P(v,d,t){return v==null?null:{v:v,d:d,t:t};}
@@ -207,7 +240,7 @@ function wkIsDL(k){var d=isoMon(k);if(!d)return false;var td=d.toISOString().sli
 function spark(series,lower,cls,desc){series=(series||[]).map(function(o){return (o&&typeof o==='object')?o:{v:o,d:String(o),t:''};}).filter(function(o){return o.v!=null;});if(series.length<2)return '<span class="na">—</span>';var vals=series.map(function(o){return o.v;});var mn=Math.min.apply(0,vals),mx=Math.max.apply(0,vals),rng=(mx-mn)||1,h=cls==='bigspark'?56:26;var xy=series.map(function(o,i){return {x:i/(series.length-1)*100,y:(h-3)-((o.v-mn)/rng)*(h-6),o:o};});var poly=xy.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var imp=vals[vals.length-1]>vals[0];if(lower)imp=!imp;var c=imp?'var(--good)':'var(--warn)';var band=100/(series.length-1);var dots=xy.map(function(p){return '<rect x="'+(p.x-0.5).toFixed(1)+'" y="'+(p.y-2).toFixed(1)+'" width="1" height="4" fill="'+c+'"></rect>';}).join('');var hit=xy.map(function(p){return '<rect class="pt" x="'+Math.max(0,p.x-band/2).toFixed(1)+'" y="0" width="'+band.toFixed(1)+'" height="'+h+'" fill="transparent" data-d="'+String(p.o.d).replace(/"/g,'')+'" data-t="'+(p.o.t||'')+'" data-desc="'+(desc||'').replace(/"/g,'')+'"></rect>';}).join('');return '<svg class="'+(cls||'spark')+'" viewBox="0 0 100 '+h+'" preserveAspectRatio="none"><polyline points="'+poly+'" fill="none" stroke="'+c+'" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>'+dots+hit+'</svg>';}
 function arrow(vals,lower){vals=(vals||[]).map(function(o){return o&&typeof o==='object'?o.v:o;}).filter(function(v){return v!=null;});if(vals.length<2)return '';var imp=vals[vals.length-1]>vals[0];if(lower)imp=!imp;return '<span class="tr" style="color:'+(imp?'var(--good)':'var(--warn)')+'">'+(imp?'▲':'▼')+'</span>';}
 
-var CONFIG = {"races": [["2026-12-11", "Stockholm"], ["2027-03-25", "Copenhagen"], ["2027-04-16", "Helsinki"]], "phases": [["2026-07-13", "2026-07-19", "W29", "Deload"], ["2026-07-20", "2026-08-09", "W30-32", "Build"], ["2026-08-10", "2026-08-16", "W33", "Deload"], ["2026-08-17", "2026-09-06", "W34-36", "Build"], ["2026-09-07", "2026-09-13", "W37", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-09-14", "2026-10-04", "W38-40", "Build"], ["2026-10-05", "2026-10-11", "W41", "Deload+test", "FTP Bike (Tue) + 5K Run (Thu) · quarterly"], ["2026-10-12", "2026-11-01", "W42-44", "Build"], ["2026-11-02", "2026-11-08", "W45", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-11-09", "2026-11-29", "W46-48", "Build"], ["2026-11-30", "2026-12-11", "W49-50", "Taper"]], "goals": {"dl": 130, "fs": 80, "pr": 25, "bl": 25, "bg": 22.5, "cad": 170, "wb": 100, "wb_pr": 62, "volume": 55}, "bands": {"Ski": null, "Row": null, "Run": null}, "rhr_base": 40, "bench": {"runpace": {"m1": 288, "m2": 269}, "ski": {"m1": 273, "m2": 260}, "wb": {"m1": 299, "m2": 270}}}; // plan data only — no health data in the public file
+var CONFIG = {"races": [["2026-12-11", "Stockholm"], ["2027-03-25", "Copenhagen"], ["2027-04-16", "Helsinki"]], "phases": [["2026-07-13", "2026-07-19", "W29", "Deload"], ["2026-07-20", "2026-08-09", "W30-32", "Build"], ["2026-08-10", "2026-08-16", "W33", "Deload"], ["2026-08-17", "2026-09-06", "W34-36", "Build"], ["2026-09-07", "2026-09-13", "W37", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-09-14", "2026-10-04", "W38-40", "Build"], ["2026-10-05", "2026-10-11", "W41", "Deload+test", "FTP Bike (Tue) + 5K Run (Thu) · quarterly"], ["2026-10-12", "2026-11-01", "W42-44", "Build"], ["2026-11-02", "2026-11-08", "W45", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-11-09", "2026-11-29", "W46-48", "Build"], ["2026-11-30", "2026-12-11", "W49-50", "Taper"]], "goals": {"dl": 130, "fs": 80, "pr": 25, "bl": 25, "bg": 22.5, "cad": 170, "wb": 100, "wb_pr": 62, "volume": 55}, "bands": {"Ski": null, "Row": null, "Run": null}, "threshold_plan": [["2026-08-17", "2026-09-06", ["Ski"]], ["2026-09-14", "2026-10-04", ["Run", "Ski"]], ["2026-10-12", "2026-11-01", ["Run"]], ["2026-11-09", "2026-11-29", ["Run"]]], "rhr_base": 40, "bench": {"runpace": {"m1": 288, "m2": 269}, "ski": {"m1": 273, "m2": 260}, "wb": {"m1": 299, "m2": 270}}}; // plan data only — no health data in the public file
 // ═══ Datakontrakt mot arket (22 aug, schema v9) ═══════════════════════
 // MAP är ENDA källan för både adapt() och kolumnkontrollen. En kolumn som inte
 // står här läses inte av något kort; en kolumn som står här MÅSTE finnas i
@@ -583,36 +616,52 @@ function renderTrends(w){var c=cut(w);
  var vv={}; fdate(D.run,c).forEach(function(r){var k=iso(pd(r.date));vv[k]=(vv[k]||0)+(num(r.dist)||0);});fdate(D.vo2||[],c).forEach(function(r){var k=iso(pd(r.date));vv[k]=(vv[k]||0)+(num(r.dist)||0);});fdate(D.thr,c).filter(function(t){return t.type==='Run';}).forEach(function(t){var k=iso(pd(t.date));vv[k]=(vv[k]||0)+thrKm(t);});var vkk=Object.keys(vv).sort();
  var wa=fdate(D.bike,c).filter(function(b){return num(b.watt)!=null;}).map(function(b){return P(num(b.watt),num(b.watt)+' W',b.date);});
  var rt=fdate(D.ron,c).map(function(r){var s=['v1','v2','v3','v4'].reduce(function(a,k){return a+(num(r[k])||0);},0);return s>0?P(s,mmss(s),r.date):null;}).filter(function(o){return o;});
- // ══ TROSKELN, MODALITETSAGNOSTISK (build 3.13) ═══════════════════════
- // Korten drivs av de `Type`-varden som FAKTISKT ligger i fonstret, sorterade pa
- // senaste anvandning. Ingen modalitetslista, ingen veckoordning, ingen fas i
- // koden: modalitetsplanen i master gar att skriva om utan att en rad kod ror sig.
- // En modalitet utan rader i fonstret ritas INTE alls — inte som ett tomt kort.
- // Rodd exkluderas aldrig explicit. Den forsvinner nar dess rader rullar ur
- // fonstret, och dyker en rodd-troskel upp igen SKA den synas: en rad som
- // motsager planen ar information, inte skrap. En hardkodad if(type==='Row')
- // vore samma dod-vakt-monster som ENUMS-nyckeln 'Bike'.
+ // ══ TROSKELN — SVARAR "BLIR JAG SNABBARE?" (build 3.14) ══════════════
+ // Master: "Framsteg = samma fart till LAGRE PULS." Pace ensamt svarar inte pa
+ // den fragan — den kan forbattras genom att bara trycka hardare, och de tva
+ // senaste troskelpassen (18 och 25 aug) kordes 10/10 All Out. Domen tas darfor
+ // pa pace OCH puls tillsammans, aldrig pa pace ensamt.
+ //
+ // Modaliteterna kommer ur DATAN, ordningen ur CONFIG. `threshold_plan` speglar
+ // master §6 (v.34-36 ski · v.38-40 varvat · v.42+ run). Blockets modaliteter far
+ // fulla kort; allt annat som loggats hamnar i "Also logged" — demoterat, aldrig
+ // raderat. En rad som motsager planen ar information, och en hardkodad
+ // if(type==='Row') vore samma dod-vakt-monster som ENUMS-nyckeln 'Bike'.
+ // Ligger dagens datum mellan tva block (deload) demoteras INGENTING — utan
+ // grund i planen far kortet inte pasta att nagot ar off-plan.
+ function planMods(){
+   var td=new Date(now).toISOString().slice(0,10);
+   var b=(cfg.threshold_plan||[]).filter(function(p){return td>=p[0]&&td<=p[1];})[0];
+   return b?b[2]:null;
+ }
  function thrBlocks(){
    var rows=fdate(D.thr,c).filter(function(t){return t.type&&String(t.type).trim()&&!isDL(t.date);});
    var by={};
    rows.forEach(function(t){var k=String(t.type).trim();(by[k]=by[k]||[]).push(t);});
+   var plan=planMods();
    return Object.keys(by).filter(function(k){return THR_MODES[k];})
-     .sort(function(a,b){var la=last(by[a]).date,lb=last(by[b]).date;return la<lb?1:(la>lb?-1:0);})
      .map(function(k){
        var M=THR_MODES[k],all=by[k],ls=last(all),struct=ls.ints+'×'+ls.len;
-       // STRUKTUR OCH KONTROLLVARIABEL AVGOR JAMFORBARHETEN — pa pace-panelen lika
-       // val som pa metrarna. Serien innehol 5x6, 3x10 OCH deload-2x10 samtidigt,
+       // STRUKTUR AVGOR JAMFORBARHETEN. Serien innehol 5x6, 3x10 OCH deload-2x10,
        // sa "best yet" kunde jamfora ett 3x10 mot ett 5x6 och kalla det framsteg.
        var comp=all.filter(function(t){return (t.ints+'×'+t.len)===struct;});
        var cl=num(ls[M.ctrl]),prev=comp.length>=2?comp[comp.length-2]:null,cp=prev?num(prev[M.ctrl]):null;
-       return {key:k,M:M,all:all,comp:comp,last:ls,struct:struct,
+       return {key:k,M:M,all:all,comp:comp,last:ls,prev:prev,struct:struct,
                ctrl:cl,ctrlPrev:cp,ctrlDiff:(cl!=null&&cp!=null&&cl!==cp),
+               inPlan:!plan||plan.indexOf(k)>=0,
+               order:plan?plan.indexOf(k):0,
                dropped:all.length-comp.length};
+     })
+     .sort(function(a,b){
+       if(a.inPlan!==b.inPlan) return a.inPlan?-1:1;        // planens modaliteter forst
+       if(a.inPlan&&a.order!==b.order) return a.order-b.order;  // sedan planens ordning
+       var la=last(a.comp).date,lb=last(b.comp).date;        // annars senast anvand
+       return la<lb?1:(la>lb?-1:0);
      });
  }
  function thrSeries(b){
    return b.comp.filter(function(t){return psec(t[b.M.pace])!=null;})
-     .map(function(t){return P(psec(t[b.M.pace]),mmss(psec(t[b.M.pace]))+' '+b.M.unit+' '+b.M.label+' ('+t.ints+'×'+t.len+')',t.date);});
+     .map(function(t){return P(psec(t[b.M.pace]),mmss(psec(t[b.M.pace]))+' '+b.M.unit+(num(t.bpm)!=null?' @ '+num(t.bpm)+' bpm':''),t.date);});
  }
  // Kontrollvariabeln: ski/rodd = drag factor, lopning = lutning (master §6).
  function ctrlTag(b){
@@ -621,19 +670,16 @@ function renderTrends(w){var c=cut(w);
    if(b.ctrlDiff)return '<span class="bdelta warn">'+b.M.ctrlTxt(b.ctrl)+' vs '+b.M.ctrlTxt(b.ctrlPrev)+' — not comparable</span>';
    return '<span style="color:var(--mut)">'+b.M.ctrlTxt(b.ctrl)+'</span>';
  }
- // SPRIDNINGEN MELLAN INTERVALLERNA — troskelpassets viktigaste tal. Den gar inte
- // att rakna ur ett snitt, darfor kolumnen `Interval splits` (schema v10).
- function spreadOf(t){
-   var xs=splitList(t&&t.splits); if(!xs||xs.length<2)return null;
-   var mn=Math.min.apply(0,xs),mx=Math.max.apply(0,xs);
-   var mean=xs.reduce(function(a,b){return a+b;},0)/xs.length;
-   return {n:xs.length,min:mn,max:mx,range:mx-mn,mean:mean,pct:mean?(mx-mn)/mean*100:null,vals:xs};
+ function spanTxt(b){
+   var a=b.comp[0].date, z=last(b.comp).date;
+   return b.comp.length+' session'+(b.comp.length===1?'':'s')+' · '+String(a).slice(5)+(a===z?'':' – '+String(z).slice(5));
  }
  // BANDET HALLS, JAGAS ALDRIG. Malbanden ar INTE satta — ett kalibreringspass per
- // modalitet skriver in dem i master. Tills dess sags det rakt ut; ett pahittat
- // band ar samma sorts fel som en pahittad pace.
+ // modalitet skriver in dem i master. Tills dess sags det rakt ut.
  function bandOf(k){var b=(cfg.bands||{})[k];return (b&&b.lo&&b.hi&&psec(b.lo)!=null&&psec(b.hi)!=null)?{lo:psec(b.lo),hi:psec(b.hi),txt:b.lo+'–'+b.hi}:null;}
- var thrB=thrBlocks();
+ var thrAll=thrBlocks();
+ var thrB=thrAll.filter(function(b){return b.inPlan;});
+ var thrOff=thrAll.filter(function(b){return !b.inPlan;});
  var uncal=[];
  var bandBody=thrB.length?thrB.map(function(b){
    var sp=spreadOf(b.last),bd=bandOf(b.key),ef=num(b.last.effort);
@@ -649,7 +695,12 @@ function renderTrends(w){var c=cut(w);
    if(!bd)uncal.push(b.M.label);
    var notes=[];
    if(bd&&sp)notes.push('Spread '+mmss(sp.range)+' across '+sp.n+' intervals'+(sp.pct!=null?' · '+sp.pct.toFixed(1)+'%':''));
-   if(ef!=null)notes.push('Effort '+ef+'/10'+(ef>=9?' — the band was set too high':''));
+   // EFFORT 9-10 AR EN VARNING, ALDRIG EN BRAGD (master §6): da lag bandet for
+   // hogt och passet blev ett maxtest i troskelns klader. Saknas effort sags det —
+   // utan den gar kvalitetskontrollen inte att kora.
+   if(ef==null)notes.push('<span class="nain">effort not logged — the band check cannot run</span>');
+   else if(ef>=9)notes.push('<b style="color:var(--warn)">Effort '+ef+'/10 — run as a test, not as threshold work</b>');
+   else notes.push('Effort '+ef+'/10');
    var read=[];
    var pv=psec(b.last[b.M.pace]); if(pv!=null)read.push(mmss(pv)+' '+b.M.unit);
    var mv=num(b.last.meters); if(mv!=null)read.push(fmtN(mv)+' m');
@@ -659,29 +710,48 @@ function renderTrends(w){var c=cut(w);
      +head
      +(notes.length?'<div class="foot-note">'+notes.join(' · ')+'</div>':'')
      +'<div class="foot-note">'+ctrlTag(b)+(read.length?' · '+read.join(' · ')+' — a readout, never the target':'')+'</div></div>';
- }).join(''):'<div class="na">No threshold session logged in this window.</div>';
+ }).join(''):'<div class="na">No threshold session logged for this block\'s modalities.</div>';
  // Skalet sags EN gang per kort, inte en gang per modalitet: tre identiska rader
  // om samma sak laser man forbi, och da forsvinner det som faktiskt star dar.
  if(uncal.length)bandBody+='<div class="foot-note">Band not calibrated for '+uncal.join(' · ')
    +' — the spread is the signal until one calibration session per modality writes the band into master.</div>';
+ // ALSO LOGGED — modaliteter som ligger UTANFOR blockets plan. Demoterade till en
+ // rad, utan PR-chip: de ar sanna som loggade men de ar inte det vi tranar nu.
+ // Kortet ritas bara nar det finns nagot att visa, och forsvinner av sig sjalvt.
+ var offBody=thrOff.map(function(b){
+   var pv=psec(b.last[b.M.pace]);
+   return '<div class="kv" style="margin-bottom:7px"><span class="kvl">'+b.M.label+' · '+b.struct+'</span>'
+     +'<span style="font-size:12px;font-weight:700">'+(pv!=null?mmss(pv)+' '+b.M.unit:'—')+'</span></div>'
+     +'<div class="foot-note" style="margin-bottom:11px">'+String(b.last.date).slice(5)+' · '+spanTxt(b)+'</div>';
+ }).join('');
+
 var _zm=zoneMins(c);var _zt=_zm.reduce(function(a,b){return a+b;},0)||1;var _z24=Math.round((_zm[2]+_zm[4])/_zt*100);var zoneBody=zoneWidget(_zm)+'<div class="foot-note">'+(_zt>1?((_zt/60).toFixed(1)+' h from logged zone splits'):'No zone split logged yet')+(_zm.skipped?(' · '+_zm.skipped+' session'+(_zm.skipped===1?'':'s')+' without split — not counted'):' · every session has a split')+'</div>';document.getElementById('lens3eng').innerHTML=[].concat(thrB.map(function(b){
    var srs=thrSeries(b);
-   var foot=b.dropped?'<div class="foot-note">'+b.dropped+' session'+(b.dropped===1?'':'s')+' on another structure — not plotted</div>':'';
-   return mpanel('eng','Threshold '+b.M.label+' '+b.M.unit,
-     b.struct+(b.ctrl!=null?' · '+b.M.ctrlTxt(b.ctrl):'')+' · lower is faster',
-     mmss((last(srs)||{}).v),
-     b.ctrlDiff?{cls:'warn',txt:'control changed'}:chipBest(srs,true),
+   var v=costVerdict(b);
+   var notes=[];
+   if(v.delta)notes.push(v.delta+' vs '+String(b.prev.date).slice(5));
+   if(v.why)notes.push('<span class="nain">'+v.why+'</span>');
+   notes.push(spanTxt(b));
+   if(b.dropped)notes.push(b.dropped+' on another structure — not plotted');
+   var hr=num(b.last.bpm);
+   return mpanel('eng','Threshold '+b.M.label+' — pace at cost',
+     b.struct+(b.ctrl!=null?' · '+b.M.ctrlTxt(b.ctrl):'')+' · faster at the same or lower HR = progress',
+     ((last(srs)||{}).v==null?'—':mmss((last(srs)||{}).v)+(hr!=null?'<small> @ '+hr+' bpm</small>':'<small> @ — bpm</small>')),
+     v.txt?{cls:v.cls,txt:v.txt}:null,
      srs,bestOf(srs,true),
-     bspark(srs,bestOf(srs,true))+foot,
-     b.M.label+' threshold pace per '+(b.M.unit==='/km'?'km':'500 m')+' — lower is faster. Only sessions on the same structure ('+b.struct+') are plotted; modalities are never mixed.');
+     bspark(srs,bestOf(srs,true))+'<div class="foot-note">'+notes.join(' · ')+'</div>',
+     b.M.label+' threshold pace per '+(b.M.unit==='/km'?'km':'500 m')+' read against its cost. Master: progress is the same pace at a LOWER heart rate — pace alone can be bought with effort. Only sessions on the same structure ('+b.struct+') are compared; modalities are never mixed.');
  })).concat([
   panel('eng','Threshold — band adherence','Held the band · spread between intervals · metres are a readout',bandBody),
+  (thrOff.length?panel('eng','Also logged','Outside this block’s threshold plan · shown, never scored',
+     offBody+'<div class="foot-note">The plan trains '+((planMods()||[]).join(' · ')||'—')
+       +' in this block (master §6). True as logged and kept visible — just not what the block is building. Change the plan in master and in CONFIG.threshold_plan and these move up on their own.</div>'):''),
   mpanel('eng','Roncevic total','Race-sim · training side · vs your best',mmss((last(rt)||{}).v),chipBest(rt,true),rt,bestOf(rt,true),null,'Roncevic race-sim total — training data, never compared to race goals.'),
   (function(){var vp=fdate(D.vo2||[],c).filter(function(x){return psec(x.pace)!=null;}).map(function(x){return P(psec(x.pace),mmss(psec(x.pace))+' /km',x.date);});
    if(vp.length)return panel('eng','VO2 / intervals — pace','Z5–6 · lower is faster',bigspark(vp,true,'VO2 interval pace per km — lower is faster.'));
    // Platshallaren namner bara det som FAKTISKT inte ar loggat an. Den sa
    // "Run threshold /km — Phase 2" langt efter att lop-troskeln blivit forstaklass.
-   if(thrB.length)return '';
+   if(thrAll.length)return '';
    return panel('eng','Coming next','Slots open when first logged','<div class="na" style="padding:8px 0;line-height:1.9">Threshold — when the first session is logged<br>VO2 intervals — when programmed</div>');})()
  ]).join('');
 document.getElementById('engine').innerHTML=[
@@ -1044,6 +1114,27 @@ function selftest(raw){
     var utan=tw.filter(function(p){return !p[4];}).map(function(p){return p[2];});
     return utan.length ? {ok:false, note:'testvecka utan testplan: '+utan.join(', ')}
                        : {ok:true, note:tw.length+' testveckor, alla med plan'}; });
+
+  t('Varje modalitet i tröskelplanen har en rendering', function(){
+    var bad=[];(CONFIG.threshold_plan||[]).forEach(function(b){(b[2]||[]).forEach(function(m){
+      if(!THR_MODES[m]&&bad.indexOf(m)<0)bad.push(m);});});
+    return bad.length ? {ok:false, note:'planen namnger '+bad.join(', ')+' som inget kort renderar'}
+      : {ok:true, note:(CONFIG.threshold_plan||[]).length+' block'}; });
+  t('Tröskelplanens block överlappar inte', function(){
+    var b=(CONFIG.threshold_plan||[]).slice().sort(function(x,y){return x[0]<y[0]?-1:1;});
+    for(var i=1;i<b.length;i++) if(b[i][0]<=b[i-1][1])
+      return {ok:false, note:b[i-1][2].join('/')+' och '+b[i][2].join('/')+' överlappar vid '+b[i][0]};
+    return {ok:true, note:b.length?(b[0][0]+' → '+b[b.length-1][1]):'ingen plan satt'}; });
+  t('Framsteg mäts mot pulsen, inte bara pace', function(){
+    var M=THR_MODES.Ski;
+    var mk=function(p1,h1,p0,h0){return {M:M, last:{'pace':p1,bpm:h1}, prev:{'pace':p0,bpm:h0,date:'2026-01-01'}};};
+    var same=costVerdict(mk('1:56',140,'1:56',150));
+    var bought=costVerdict(mk('1:53',160,'1:56',140));
+    var blind=costVerdict(mk('1:53',null,'1:56',140));
+    if(same.cls!=='good') return 'samma fart till lägre puls lästes som '+same.txt;
+    if(bought.txt!=='faster, paid for') return 'snabbare till högre puls lästes som '+bought.txt;
+    if(blind.txt!=='cost unknown') return 'utan puls lästes det som '+blind.txt;
+    return {ok:true, note:'"'+same.txt+'" · "'+bought.txt+'" · "'+blind.txt+'"'}; });
 
   t('Inga fynd i dataintegritetskontrollen', function(){
     return DQ.length ? {ok:false, note:DQ.length+' fynd — se listan nedan'} : true; });
