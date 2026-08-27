@@ -144,7 +144,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <div class="quote" id="quote"></div>
 <div class="foot" id="foot"></div></div><div id="tt"></div>
 <script>
-var BUILD="3.12 · 2026-08-24 · styrka jämförs samma vågvecka mot samma · front squat fick sitt mål";
+var BUILD="3.13 · 2026-08-27 · tröskeln på två modaliteter · korten drivs av loggad data, inte av planen · band adherence ersatte meters to beat";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -155,6 +155,47 @@ function iso(d){var t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()
 function psec(s){if(s==null||s==='')return null;var m=String(s).match(/(\d+):(\d+(?:\.\d+)?)/);return m?(+m[1])*60+parseFloat(m[2]):null;}
 function mmss(s){if(s==null)return '—';var m=Math.floor(s/60),x=Math.round(s%60);return m+':'+String(x).padStart(2,'0');}
 function byd(a){return a.filter(function(x){return x.date;}).sort(function(p,q){return p.date<q.date?-1:1;});}
+// PASSET KLASSAS EFTER SIN AVSIKT. `Zone` ar passets TYP, inte var pulsen lag —
+// Z1 och Z2 ar de lagintensiva avsikterna, ingenting annat. /Z/ matchade Z1-Z5 och
+// lat ett Z4-lopppass ticka Z2-basen; ett tomt Zone-varde raknas aldrig som lagt.
+function isLowZone(z){return /^Z[12]$/i.test(String(z==null?'':z).trim());}
+// LOPTROSKELN AR ETT LOPPASS. `Total meters` ar requiredIf Type!=Run, sa en
+// spec-korrekt Run-rad har INGA meter — den forsvann darfor helt ur run-volymen
+// och ur wk/wk-procenten. Km harleds ur struktur x pace nar metrarna saknas.
+// Anvands pa BADA stallena volymen raknas (veckoregeln + Weekly run volume).
+function thrKm(t){
+  if(!t)return 0;
+  var m=num(t.meters); if(m!=null&&m>0)return m/1000;
+  var ints=num(t.ints), len=num(t.len), p=psec(t.pacekm);
+  if(ints&&len&&p)return (ints*len*60)/p;   // arbetssekunder / (s per km) = km
+  return 0;
+}
+// TROSKELNS MODALITETER — vad varje `Threshold.Type` renderas MED. Korten laser
+// den har tabellen och datan; de kanner ingen veckoordning och ingen fas, sa
+// modalitetsplanen i master gar att skriva om utan att en rad kod ror sig.
+// `pace` ar MAP-nyckeln for modalitetens pace-kolumn, `ctrl` dess kontrollvariabel:
+// ski/rodd styrs av drag factor, lopning av lutningen (master §6).
+var THR_MODES = {
+  Ski: {label:'Ski', pace:'pace',   unit:'/500m', ctrl:'drag',    ctrlTxt:function(v){return 'drag '+v;}},
+  Row: {label:'Row', pace:'pace',   unit:'/500m', ctrl:'drag',    ctrlTxt:function(v){return 'drag '+v;}},
+  Run: {label:'Run', pace:'pacekm', unit:'/km',   ctrl:'incline', ctrlTxt:function(v){return v+'% incline';}}
+};
+// Vakten over modaliteterna. ENUMS slapper igenom ett `Type` som koden kanner —
+// men ett varde utan rendering forsvinner anda TYST ur korten. Samma monster som
+// den doda enum-nyckeln: kontrollen granskar KODEN och kors aven pa tom payload.
+function modeGuard(){
+  var vals=((ENUMS.Threshold||{})['Type'])||[];
+  return vals.filter(function(v){return !THR_MODES[v];});
+}
+// "1:55.2 · 1:56.0 · 1:55.8" -> [115.2, 116.0, 115.8]. Ett varde per intervall,
+// i modalitetens pace-enhet. Spridningen mellan dem ar troskelpassets kvalitetstal.
+function splitList(v){
+  if(v==null||v==='')return null;
+  var xs=String(v).split(/[\u00b7,;]|\s{2,}/).map(function(x){return psec(x.trim());})
+          .filter(function(x){return x!=null;});
+  return xs.length?xs:null;
+}
+
 function last(a){return a.length?a[a.length-1]:null;}
 function P(v,d,t){return v==null?null:{v:v,d:d,t:t};}
 function deriveWave(ds){var d=pd(ds);var p=cfg.phases.find(function(x){return d>=pd(x[0])&&d<=pd(x[1]);});if(!p)return '?';if(/Deload|Taper/.test(p[3]))return 'DL';var idx=Math.floor((d-pd(p[0]))/(7*DAY));return 'w'+Math.min(3,idx+1);}
@@ -166,16 +207,16 @@ function wkIsDL(k){var d=isoMon(k);if(!d)return false;var td=d.toISOString().sli
 function spark(series,lower,cls,desc){series=(series||[]).map(function(o){return (o&&typeof o==='object')?o:{v:o,d:String(o),t:''};}).filter(function(o){return o.v!=null;});if(series.length<2)return '<span class="na">—</span>';var vals=series.map(function(o){return o.v;});var mn=Math.min.apply(0,vals),mx=Math.max.apply(0,vals),rng=(mx-mn)||1,h=cls==='bigspark'?56:26;var xy=series.map(function(o,i){return {x:i/(series.length-1)*100,y:(h-3)-((o.v-mn)/rng)*(h-6),o:o};});var poly=xy.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var imp=vals[vals.length-1]>vals[0];if(lower)imp=!imp;var c=imp?'var(--good)':'var(--warn)';var band=100/(series.length-1);var dots=xy.map(function(p){return '<rect x="'+(p.x-0.5).toFixed(1)+'" y="'+(p.y-2).toFixed(1)+'" width="1" height="4" fill="'+c+'"></rect>';}).join('');var hit=xy.map(function(p){return '<rect class="pt" x="'+Math.max(0,p.x-band/2).toFixed(1)+'" y="0" width="'+band.toFixed(1)+'" height="'+h+'" fill="transparent" data-d="'+String(p.o.d).replace(/"/g,'')+'" data-t="'+(p.o.t||'')+'" data-desc="'+(desc||'').replace(/"/g,'')+'"></rect>';}).join('');return '<svg class="'+(cls||'spark')+'" viewBox="0 0 100 '+h+'" preserveAspectRatio="none"><polyline points="'+poly+'" fill="none" stroke="'+c+'" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>'+dots+hit+'</svg>';}
 function arrow(vals,lower){vals=(vals||[]).map(function(o){return o&&typeof o==='object'?o.v:o;}).filter(function(v){return v!=null;});if(vals.length<2)return '';var imp=vals[vals.length-1]>vals[0];if(lower)imp=!imp;return '<span class="tr" style="color:'+(imp?'var(--good)':'var(--warn)')+'">'+(imp?'▲':'▼')+'</span>';}
 
-var CONFIG = {"races": [["2026-12-11", "Stockholm"], ["2027-03-25", "Copenhagen"], ["2027-04-16", "Helsinki"]], "phases": [["2026-07-13", "2026-07-19", "W29", "Deload"], ["2026-07-20", "2026-08-09", "W30-32", "Build"], ["2026-08-10", "2026-08-16", "W33", "Deload"], ["2026-08-17", "2026-09-06", "W34-36", "Build"], ["2026-09-07", "2026-09-13", "W37", "Deload+test"], ["2026-09-14", "2026-10-04", "W38-40", "Build"], ["2026-10-05", "2026-10-11", "W41", "Deload+test"], ["2026-10-12", "2026-11-01", "W42-44", "Build"], ["2026-11-02", "2026-11-08", "W45", "Deload+test"], ["2026-11-09", "2026-11-29", "W46-48", "Build"], ["2026-11-30", "2026-12-11", "W49-50", "Taper"]], "goals": {"dl": 130, "fs": 80, "pr": 25, "bl": 25, "bg": 22.5, "cad": 170, "wb": 100, "wb_pr": 62, "volume": 55}, "rhr_base": 40, "bench": {"runpace": {"m1": 288, "m2": 269}, "ski": {"m1": 273, "m2": 260}, "wb": {"m1": 299, "m2": 270}}}; // plan data only — no health data in the public file
+var CONFIG = {"races": [["2026-12-11", "Stockholm"], ["2027-03-25", "Copenhagen"], ["2027-04-16", "Helsinki"]], "phases": [["2026-07-13", "2026-07-19", "W29", "Deload"], ["2026-07-20", "2026-08-09", "W30-32", "Build"], ["2026-08-10", "2026-08-16", "W33", "Deload"], ["2026-08-17", "2026-09-06", "W34-36", "Build"], ["2026-09-07", "2026-09-13", "W37", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-09-14", "2026-10-04", "W38-40", "Build"], ["2026-10-05", "2026-10-11", "W41", "Deload+test", "FTP Bike (Tue) + 5K Run (Thu) · quarterly"], ["2026-10-12", "2026-11-01", "W42-44", "Build"], ["2026-11-02", "2026-11-08", "W45", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-11-09", "2026-11-29", "W46-48", "Build"], ["2026-11-30", "2026-12-11", "W49-50", "Taper"]], "goals": {"dl": 130, "fs": 80, "pr": 25, "bl": 25, "bg": 22.5, "cad": 170, "wb": 100, "wb_pr": 62, "volume": 55}, "bands": {"Ski": null, "Row": null, "Run": null}, "rhr_base": 40, "bench": {"runpace": {"m1": 288, "m2": 269}, "ski": {"m1": 273, "m2": 260}, "wb": {"m1": 299, "m2": 270}}}; // plan data only — no health data in the public file
 // ═══ Datakontrakt mot arket (22 aug, schema v9) ═══════════════════════
 // MAP är ENDA källan för både adapt() och kolumnkontrollen. En kolumn som inte
 // står här läses inte av något kort; en kolumn som står här MÅSTE finnas i
 // payloaden, annars ritas ett rött varningskort i stället för ett tomt kort.
-var EXPECT_SCHEMA = 9;
+var EXPECT_SCHEMA = 10;
 var MAP = {
   run:    {tab:'Running',   cols:{date:'Date',dist:'Distance (km)',time:'Time (min)',cad:'Cadence (spm)',zone:'Zone',hr:'Avg HR (bpm)',split:'Zone split'}},
   bike:   {tab:'BikeErg',      cols:{date:'Date',time:'Time (min)',dist:'Distance (km)',bpm:'Avg HR',watt:'Avg watt',zone:'Zone',type:'Type',split:'Zone split',damper:'Damper',drag:'Drag factor'}},
-  thr:    {tab:'Threshold', cols:{date:'Date',type:'Type',ints:'Intervals',len:'Length (min/int)',meters:'Total meters',pace:'Avg /500m',pacekm:'Pace /km',watt:'Avg watt',bpm:'Avg HR',split:'Zone split',damper:'Damper',drag:'Drag factor'}},
+  thr:    {tab:'Threshold', cols:{date:'Date',type:'Type',ints:'Intervals',len:'Length (min/int)',meters:'Total meters',pace:'Avg /500m',pacekm:'Pace /km',watt:'Avg watt',bpm:'Avg HR',split:'Zone split',damper:'Damper',drag:'Drag factor',incline:'Incline (%)',splits:'Interval splits',effort:'Effort (1-10)',cad:'Cadence (spm)'}},
   str:    {tab:'Strength',  cols:{date:'Date',dl:'Deadlift (kg)',dlr:'DL reps',fs:'Front squat (kg)',fsr:'FS reps',pr:'Strict press (kg)',prr:'SP reps',bg:'Bulgarian (kg/h)',bgr:'BS reps/leg',bl:'Back lunge (kg/h)',blr:'BL reps/leg',lc:'Leg curl (kg/ben)',lcr:'LC reps',le:'Leg ext (kg/ben)',ler:'LE reps'}},
   hyrox:  {tab:'Hyrox',     cols:{date:'Date',push:'Sled push (kg)',lunge:'Lunges (kg)',pull:'Sled pull (kg)',farm:'Farmers (kg/hand)',vest:'Vest (kg)',len:'Session length (min)',split:'Zone split',wb:'Wall balls (kg)',bur:'Burpee broad jump (m)',rounds:'Rounds (B1·B2·B3)',wbr:'WB reps/round'}},
   ron:    {tab:'Roncevic',  cols:{date:'Date',wave:'Wave',wb:'WB weight (kg)',v1:'Round 1 (s)',v2:'Round 2 (s)',v3:'Round 3 (s)',v4:'Round 4 (s)',badge:'Badge WB',split:'Zone split'}},
@@ -264,6 +305,12 @@ function dqCheck(raw){
   lampGuard().forEach(function(m){
     out.push({sev:'err', tab:'Lamporna', what:'Namnkrock: '+m,
       fix:'Rätta JOKER i index.html — lampan ska heta samma sak som sin flik.'});
+  });
+  // Ett `Threshold.Type` som ENUMS kanner men inget kort renderar forsvinner tyst.
+  modeGuard().forEach(function(v){
+    out.push({sev:'err', tab:'Threshold',
+      what:'Type-värdet "'+v+'" har ingen rendering — passet räknas men syns inte i något tröskelkort',
+      fix:'Lägg till "'+v+'" i THR_MODES i index.html, eller ta bort det ur ENUMS.'});
   });
   var meta = raw._meta;
   if(!meta || meta.schemaVersion==null){
@@ -384,7 +431,9 @@ var yels=[rhrSt,sqSt,moSt].filter(function(s){return s==='yellow'||s==='red';}).
 var sigAll=yels>=2?'yellow':'green';
 var wk=iso(now);
 function inwk(a){return a.filter(function(x){return x.date&&iso(pd(x.date))===wk;});}
-var longWk=D.bike.filter(function(b){return b.date&&iso(pd(b.date))===wk&&num(b.time)>=50;}).length+D.run.filter(function(r){return r.date&&iso(pd(r.date))===wk&&num(r.time)>=50;}).length;
+// Long Z2-lampan tandes av VILKET SOM HELST >=50 min lop- eller cykelpass, oavsett
+// zon: ett 55 min troskel- eller race-pace-pass tande 'Long Z2'. Passtypen avgor.
+var longWk=D.bike.filter(function(b){return b.date&&iso(pd(b.date))===wk&&num(b.time)>=50&&isLowZone(b.zone);}).length+D.run.filter(function(r){return r.date&&iso(pd(r.date))===wk&&num(r.time)>=50&&isLowZone(r.zone);}).length;
 // Lampornas etiketter. Jokerns heter JOKER (top-level, vaktad av lampGuard) —
 // ALDRIG 'LifeLab': den fliken ar laktattestet och inget annat.
 var done={Hyrox:inwk(D.hyrox).length>0,Threshold:inwk(D.thr).length>0,Strength:inwk(D.str).length>0,'Roncevic':inwk(D.ron).length>0,'Long Z2':longWk>0};
@@ -402,13 +451,13 @@ var sigSub=sigChip('RHR',rhrSt,rhrNow==null?'—':rhrNow)+sigChip('Sleep',sqSt,s
 // Card 3 · This week — phase-aware: never a number that lies.
 var wkMain,wkSub,wkChip='';
 if(ph&&/Taper/.test(ph[3])){var _r0=_up.length?pd(_up[0][0]):null;var dtr=_r0?Math.ceil((_r0-now)/DAY):null;wkMain='Taper';wkChip=dtr!=null?'<span class="bdelta acc">day −'+dtr+'</span>':'';wkSub='Volume down, legs fresh';}
-else if(ph&&/test/.test(ph[3])){var tnm=ph[2]==='W41'?'FTP Bike Tue · 5K Run Thu':'2K Ski Tue · 2K Row Thu';var tdone=(D.test||[]).filter(function(t){return t.date&&iso(pd(t.date))===wk;}).length;wkMain='Test week';wkChip='<span class="bdelta '+(tdone>=2?'good':'acc')+'">'+tdone+' / 2</span>';wkSub=tnm+' — easy Z2 otherwise';}
+else if(ph&&/test/.test(ph[3])){var tnm=ph[4]||'Tests per the plan';var tgt=String(ph[4]||'').split('+').filter(function(x){return x.trim();}).length||2;var tdone=(D.test||[]).filter(function(t){return t.date&&iso(pd(t.date))===wk;}).length;wkMain='Test week';wkChip='<span class="bdelta '+(tdone>=tgt?'good':'acc')+'">'+tdone+' / '+tgt+'</span>';wkSub=tnm+' — easy Z2 otherwise';}
 else if(ph&&/Deload/.test(ph[3])){wkMain='Rest week';wkSub='No key sessions — Z2 + sleep only';}
 else{var rem=Object.keys(done).filter(function(k){return !done[k]&&k!==JOKER;});var wdots='';Object.keys(done).forEach(function(k){wdots+='<span class="sd" style="width:8px;height:8px;background:'+(done[k]?(k===JOKER?'var(--acc2)':'var(--good)'):'var(--line)')+'"></span>';});
  wkMain='Key sessions <span style="display:inline-flex;gap:4px;margin-left:7px;vertical-align:middle">'+wdots+'</span>';wkChip='<span class="bdelta '+(sessN>=5?'good':'acc')+'">'+sessN+' / 5</span>';wkSub=(rem.length?('Left: '+rem.join(' · ')):(done[JOKER]?'Budget met ✓':'All five done ✓'))+(done[JOKER]?' <span style="color:var(--acc2)">— joker played</span>':'');}
 // Card 4 · Next test — lens 2 is the trend to trust.
 var upT=cfg.phases.filter(function(p){return /test/.test(p[3])&&pd(p[0])>now;})[0], ntMain,ntSub,ntChip;
-if(upT){var dtt=Math.ceil((pd(upT[0])-now)/DAY);ntMain=upT[2]==='W41'?'FTP Bike + 5K Run':'2K Ski + 2K Row';ntChip='<span class="bdelta acc">in '+dtt+'d</span>';ntSub=upT[2]+' · deload week — the trend to trust';}
+if(upT){var dtt=Math.ceil((pd(upT[0])-now)/DAY);ntMain=String(upT[4]||'Test week').replace(/\s*\u00b7\s*quarterly\s*$/,'').replace(/\s*\((Tue|Thu)\)/g,'');ntChip='<span class="bdelta acc">in '+dtt+'d</span>';ntSub=upT[2]+' · deload week — the trend to trust';}
 else{ntMain='Lab test';ntChip='<span class="bdelta acc">Jan 2027</span>';ntSub='Re-locks the training zones';}
 // Card 2 · Phase.
 var phMain=ph?'<span style="color:var(--acc)">'+ph[3]+'</span> <span style="color:var(--mut);font-weight:600">· '+ph[2]+'</span>':'—';
@@ -424,23 +473,37 @@ var _src=document.getElementById('src');
 if(_src){_src.innerHTML='Where am I today';} // boot() körs bara efter LIVE=true; offline går till _offline()
 document.getElementById('wtype').textContent='Week type: '+(ph?(/test/.test(ph[3])?'Deload + tests — no threshold, no heavy stations':/Deload/.test(ph[3])?'Deload — no key sessions, recovery only':/Taper/.test(ph[3])?'Taper — short race-pace touches only':'Build — 5 key sessions')+'':'—')+'. Matched by content, not by day.';
 document.getElementById('lamps').innerHTML=(ph&&/Deload|Taper/.test(ph[3]))?'<span style="font-size:11px;color:var(--mut)">No key sessions this week — the five lamps return in build.</span>':Object.keys(done).map(function(k){var j=(k===JOKER);return '<div class="lamp"><div class="lc '+(done[k]?'on':'')+'"'+(done[k]&&j?' style="background:var(--acc2);border-color:var(--acc2)"':'')+'>'+(done[k]?'✓':(j?'◇':'○'))+'</div>'+k+(j?' <span style="opacity:.6">optional</span>':'')+'</div>';}).join('');
-var z2c=D.bike.filter(function(b){return b.date&&iso(pd(b.date))===wk;}).length+D.run.filter(function(r){return r.date&&iso(pd(r.date))===wk&&/Z/.test(String(r.zone||''));}).length;
+// Z2-basen raknade VARJE BikeErg-pass oavsett zon, och /Z/ matchade Z1-Z5 pa
+// loprundorna — ett Z4-pass tickade alltsa Z2-basen. Samma filter som
+// Low-intensity volume (isLowZone), sa de tva korten inte kan saga olika saker.
+var z2c=D.bike.filter(function(b){return b.date&&iso(pd(b.date))===wk&&isLowZone(b.zone);}).length+D.run.filter(function(r){return r.date&&iso(pd(r.date))===wk&&isLowZone(r.zone);}).length;
 var z2t=6,dots='';for(var zi=0;zi<z2t;zi++){dots+='<span class="dot" style="width:12px;height:12px;margin-right:4px;background:'+(zi<z2c?'var(--good)':'var(--pan2)')+'"></span>';}
 document.getElementById('z2wk').innerHTML='<span style="font-size:9px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em">Z2 base (mornings + long)</span> &nbsp; <b style="font-size:13px">'+Math.min(z2c,z2t)+' / '+z2t+'</b> &nbsp; '+dots;
-var vol={}; byd(D.run).forEach(function(r){var k=iso(pd(r.date));vol[k]=(vol[k]||0)+(num(r.dist)||0);});byd(D.vo2||[]).forEach(function(r){if(r.date){var k=iso(pd(r.date));vol[k]=(vol[k]||0)+(num(r.dist)||0);}});byd(D.thr).filter(function(t){return t.type==='Run'&&t.date;}).forEach(function(t){var k=iso(pd(t.date));vol[k]=(vol[k]||0)+((num(t.meters)||0)/1000);});
+var vol={}; byd(D.run).forEach(function(r){var k=iso(pd(r.date));vol[k]=(vol[k]||0)+(num(r.dist)||0);});byd(D.vo2||[]).forEach(function(r){if(r.date){var k=iso(pd(r.date));vol[k]=(vol[k]||0)+(num(r.dist)||0);}});byd(D.thr).filter(function(t){return t.type==='Run'&&t.date;}).forEach(function(t){var k=iso(pd(t.date));vol[k]=(vol[k]||0)+thrKm(t);});
 var _cw=iso(now);var vk=Object.keys(vol).sort(), vkComp=vk.filter(function(k){return k<_cw;}), thisV=vkComp.length?vol[vkComp[vkComp.length-1]]:0, prevV=vkComp.length>1?vol[vkComp[vkComp.length-2]]:0, volPct=prevV?Math.round((thisV/prevV-1)*100):0;
 var greenDays=rec.slice(-7).filter(function(r){return num(r.rhr)!=null&&num(r.rhr)<rhrBase+5;}).length;
-var thrNonDL=byd(D.thr).filter(function(t){return !isDL(t.date);}), thrLast=last(thrNonDL), block=thrLast?(thrLast.ints+'×'+thrLast.len+' '+(thrLast.type==='Rodd'?'Row':thrLast.type)):'—';
+var thrNonDL=byd(D.thr).filter(function(t){return !isDL(t.date);}), thrLast=last(thrNonDL), block=thrLast?(thrLast.ints+'×'+thrLast.len+' '+((THR_MODES[thrLast.type]||{}).label||thrLast.type)):'—';
 var _volDL=vkComp.length?wkIsDL(vkComp[vkComp.length-1]):false;var _volCls=_volDL?'b':((volPct>=-10&&volPct<=15)?'g':'y');
 document.getElementById('rules').innerHTML=['<span class="dot '+_volCls+'"></span>Run volume '+(volPct>=0?'+':'')+volPct+'% wk/wk'+(_volDL?' (deload)':'')+' · completed wks','<span class="dot '+(greenDays>=5?'g':'y')+'"></span>Recovery '+greenDays+'/7 green (RHR vs 14d avg)','<span class="dot b"></span>Threshold block '+block].map(function(t){return '<span class="rule">'+t+'</span>';}).join('');
 // intensity helper
-function intensity(rrun,rbike,rthr,rhy,rron,rvo2,rcls){var easy=0,thr=0,hard=0;(rcls||[]).forEach(function(c){hard+=num(c.time)||60;});(rvo2||[]).forEach(function(v){hard+=num(v.time)||0;});rrun.forEach(function(r){easy+=num(r.time)||0;});rbike.forEach(function(b){easy+=num(b.time)||0;});rthr.forEach(function(t){thr+=(num(t.ints)||0)*(num(t.len)||0);});rhy.forEach(function(h){hard+=num(h.len)||80;});rron.forEach(function(){hard+=60;});var tot=easy+thr+hard||1;return {easy:easy,pe:Math.round(easy/tot*100),ptr:Math.round(thr/tot*100),ph:Math.round(hard/tot*100)};}
-var allInt=intensity(D.run,D.bike,D.thr,D.hyrox,D.ron,D.vo2||[],D.cls||[]);
+// INTENSITETSKORTET AR BORTTAGET (build 3.13). `intensity()` la ALLA lop- och
+// cykelpass i "Easy" oavsett zon och satte Roncevic till 60 min, Hyrox till 80
+// och jokern till 60 nar langden saknades — pahittade tal av precis samma sort
+// som de zonfallbacks som ströks i build 3.7. Vid genomlasningen visade det sig
+// att `intHtml` aldrig skrevs till nagon nod: widgeten hade inte renderats pa
+// lange. Samma beslut som for `zoneOf`/`zlab` i build 3.8 — kod som ingen
+// anropar tas bort i stallet for att lagas, annars ligger den kvar som ett
+// laddat vapen. Behovs fordelningen igen byggs den mot `Zone` och LOGGAD langd,
+// och pass utan bada namns under staplarna.
 // cockpit
 
 var dlS=byd(D.str).filter(function(s){return num(s.dl)!=null&&!isDL(s.date);}).map(function(s){return P(num(s.dl),num(s.dl)+' kg',s.date);});
 var ronT=byd(D.ron).map(function(r){var s=['v1','v2','v3','v4'].reduce(function(a,k){return a+(num(r[k])||0);},0);return s>0?P(s,mmss(s),r.date):null;}).filter(function(o){return o;});
-var cadS=byd(D.run).filter(function(r){return num(r.cad)!=null;}).map(function(r){return P(num(r.cad),num(r.cad)+' spm',r.date);});
+// Kadensmalet 170+ galler ocksa pa bandet. Kortet laste bara Running-fliken, sa
+// lop-troskelns kadens fanns ingenstans. Bada flikarna, en serie, sorterad pa datum.
+var cadS=byd(byd(D.run).filter(function(r){return num(r.cad)!=null;}).map(function(r){return {date:r.date,cad:num(r.cad),src:'run'};})
+  .concat(byd(D.thr).filter(function(t){return t.type==='Run'&&num(t.cad)!=null;}).map(function(t){return {date:t.date,cad:num(t.cad),src:'threshold'};})))
+  .map(function(r){return P(r.cad,r.cad+' spm ('+r.src+')',r.date);});
 function bspark(series,ref,cls){series=(series||[]).filter(function(o){return o&&o.v!=null;});if(series.length<2)return '<span class="na">trend after 2 logs</span>';var vals=series.map(function(o){return o.v;});var mn=Math.min.apply(0,vals),mx=Math.max.apply(0,vals);if(ref!=null){mn=Math.min(mn,ref);mx=Math.max(mx,ref);}var rng=(mx-mn)||1,h=46,pad=5;function Y(v){return (h-pad)-((v-mn)/rng)*(h-2*pad);}var xy=series.map(function(o,i){return {x:i/(series.length-1)*100,y:Y(o.v),o:o};});var poly=xy.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var band=100/(series.length-1);var dots=xy.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="1.7" fill="var(--acc)"></circle>';}).join('');var rl=ref!=null?'<line x1="0" y1="'+Y(ref).toFixed(1)+'" x2="100" y2="'+Y(ref).toFixed(1)+'" stroke="var(--mut)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" opacity="0.55"></line>':'';var hit=xy.map(function(p){return '<rect class="pt" x="'+Math.max(0,p.x-band/2).toFixed(1)+'" y="0" width="'+band.toFixed(1)+'" height="'+h+'" fill="transparent" data-d="'+String(p.o.d).replace(/"/g,'')+'" data-t="'+(p.o.t||'')+'"></rect>';}).join('');return '<svg class="'+(cls||'bspark')+'" viewBox="0 0 100 '+h+'" preserveAspectRatio="none">'+rl+'<polyline points="'+poly+'" fill="none" stroke="var(--acc)" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>'+dots+hit+'</svg>';}function vo2card(v){var mk=v?Math.max(3,Math.min(97,Math.round((v-30)/55*100))):null;var cl=v==null?'':(v>=75?'World-class · top <1%':v>=60?'Elite endurance · top ~1%':v>=52?'Superior · ~95th':v>=45?'Good · ~75th':v>=38?'Above average':'Average');return '<div class="card tile" data-desc="VO₂max vs age-group norms (Cooper/ACSM, men 45–49)."><div class="lb">Lens 1 · Lab baseline</div><div class="row"><div class="val">VO₂max '+(v||'—')+'</div><span style="font-size:10px;color:var(--mut)">Next lab Jan 2027</span></div>'+(v?'<div style="position:relative;margin-top:12px;height:9px;border-radius:5px;background:linear-gradient(90deg,#1d2531,#1e3a8a 45%,#2563eb 72%,#93c5fd)"><div style="position:absolute;top:-4px;left:'+mk+'%;width:3px;height:17px;background:#fff;border-radius:2px;transform:translateX(-50%);box-shadow:0 0 0 2px var(--pan)"></div></div><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--mut);margin-top:5px"><span>avg 38</span><span>excellent 52</span><span>elite 60</span><span>WC 80</span></div><div style="font-size:11px;font-weight:800;color:var(--acc);margin-top:7px">'+cl+' · men 45–49</div><div style="font-size:9px;color:var(--mut);margin-top:2px">Motor ceiling already elite — the limiter is pace under fatigue</div>':'')+'</div>';}function parseSplit(s){if(!s)return null;s=String(s);var z=[0,0,0,0,0,0],f=false,re=/Z\s*(\d)[^\d]*(\d+):(\d{2})/g,m;while(m=re.exec(s)){var zi=+m[1];if(zi>=1){z[Math.min(zi,5)]+=(+m[2])+(+m[3])/60;f=true;}}return f?z:null;}
 function zoneMins(cut){
   // EN REGEL (build 3.7): ett pass raknas i motorn bara om det har en zonsplit.
@@ -504,7 +567,6 @@ function waveLine(label,rows,f,goal,cap,repF){var s=v1vals(rows,f);var note;
  var gap=(goal&&cur!=null)?(goal-cur):null;
  var gchip=gap==null?(goal?'':'<span class="bdelta">own trend</span>'):(gap>0?'<span class="bdelta acc">→ '+(gap%1?gap.toFixed(1):gap)+' kg to '+goal+'</span>':(repGoal&&repsAt>=repGoal?'<span class="bdelta good">'+goal+' kg × '+repGoal+' ✓</span>':'<span class="bdelta acc">'+goal+' kg ✓ · reps '+repsAt+'/'+(repGoal||'?')+'</span>'));return '<div class="prog"><div class="pctl" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>'+label+(cap?' <span style="opacity:.6">'+cap+'</span>':'')+'</span>'+gchip+'</div><div class="t"><span>'+(cur!=null?cur+' kg':'—')+repTxt+(_last?' <span class="wtag">'+deriveWave(_last.date)+' · '+wdate(_last.date)+'</span>':'')+'</span><span>'+note+'</span></div>'+(goal?'<div class="trk"><span style="width:'+barpct+'%"></span></div>':'')+'</div>';}
 function cut(w){return w?new Date(now-w*DAY):null;}
-function isRow(t){var v=String(t&&t.type||'');return v==='Row'||v==='Rodd';}
 function fdate(a,c){return byd(a).filter(function(x){return !c||pd(x.date)>=c;});}
 function mpanel(cls,title,sub,val,chip,series,refLine,body,desc){if(val==='—'||val==null)val='<span style="color:var(--mut);font-weight:600">—</span>';return '<div class="card panel '+cls+'" data-desc="'+String(desc||sub).replace(/<[^>]+>/g,'').replace(/"/g,'')+'"><h3>'+title+'</h3><div class="sub">'+sub+'</div><div class="mrow"><div class="mval">'+val+'</div>'+(chip?'<span class="bdelta '+chip.cls+'">'+chip.txt+'</span>':'')+'</div>'+(body||bspark(series,refLine))+'</div>';}function panel(cls,title,sub,body){return '<div class="card panel '+cls+'" data-desc="'+String(sub).replace(/<[^>]+>/g,'').replace(/"/g,'')+'"><h3>'+title+'</h3><div class="sub">'+sub+'</div>'+body+'</div>';}
 function bigspark(vals,lower,desc){var s=(vals||[]).map(function(o){return o&&typeof o==='object'?o:{v:o,d:String(o),t:''};}).filter(function(o){return o.v!=null;});return s.length<2?'<div class="na">Awaiting data</div>':spark(s,lower,'bigspark',desc);}
@@ -518,30 +580,110 @@ function barsvg(series,desc,wip){if(!series.length&&!wip)return '<div class="na"
   +'</div><div class="axis"><span>'+String(all[0].t||'').slice(5)+'</span><span>'
   +String(all[all.length-1].t||'').slice(5)+(wip?' · pågår':'')+'</span></div>';}
 function renderTrends(w){var c=cut(w);
- var tSki=fdate(D.thr,c).filter(function(t){return t.type==='Ski'&&psec(t.pace)!=null;}).map(function(t){return P(psec(t.pace),mmss(psec(t.pace))+' /500m Ski',t.date);});
- var tRowE=fdate(D.thr,c).filter(function(t){return isRow(t)&&psec(t.pace)!=null;}).map(function(t){return P(psec(t.pace),mmss(psec(t.pace))+' /500m Row',t.date);});
- var tRun=fdate(D.thr,c).filter(function(t){return t.type==='Run'&&psec(t.pacekm)!=null;}).map(function(t){return P(psec(t.pacekm),mmss(psec(t.pacekm))+' /km',t.date);});
- var vv={}; fdate(D.run,c).forEach(function(r){var k=iso(pd(r.date));vv[k]=(vv[k]||0)+(num(r.dist)||0);});fdate(D.vo2||[],c).forEach(function(r){var k=iso(pd(r.date));vv[k]=(vv[k]||0)+(num(r.dist)||0);});fdate(D.thr,c).filter(function(t){return t.type==='Run';}).forEach(function(t){var k=iso(pd(t.date));vv[k]=(vv[k]||0)+((num(t.meters)||0)/1000);});var vkk=Object.keys(vv).sort();
+ var vv={}; fdate(D.run,c).forEach(function(r){var k=iso(pd(r.date));vv[k]=(vv[k]||0)+(num(r.dist)||0);});fdate(D.vo2||[],c).forEach(function(r){var k=iso(pd(r.date));vv[k]=(vv[k]||0)+(num(r.dist)||0);});fdate(D.thr,c).filter(function(t){return t.type==='Run';}).forEach(function(t){var k=iso(pd(t.date));vv[k]=(vv[k]||0)+thrKm(t);});var vkk=Object.keys(vv).sort();
  var wa=fdate(D.bike,c).filter(function(b){return num(b.watt)!=null;}).map(function(b){return P(num(b.watt),num(b.watt)+' W',b.date);});
  var rt=fdate(D.ron,c).map(function(r){var s=['v1','v2','v3','v4'].reduce(function(a,k){return a+(num(r[k])||0);},0);return s>0?P(s,mmss(s),r.date):null;}).filter(function(o){return o;});
- var it=intensity(fdate(D.run,c),fdate(D.bike,c),fdate(D.thr,c),fdate(D.hyrox,c),fdate(D.ron,c),fdate(D.vo2||[],c),fdate(D.cls||[],c));
- var intHtml='<div class="stack"><span style="width:'+it.pe+'%;background:var(--acc)"></span><span style="width:'+it.ptr+'%;background:var(--warn)"></span><span style="width:'+it.ph+'%;background:var(--acc2)"></span></div><div class="legend"><span><i style="background:var(--acc)"></i>Easy '+it.pe+'%</span><span><i style="background:var(--warn)"></i>Threshold '+it.ptr+'%</span><span><i style="background:var(--acc2)"></i>Hard '+it.ph+'%</span></div><div class="sub" style="margin-top:6px">'+(it.easy/60).toFixed(1)+'h aerobic base in view</div>';
- var metersBody=['Ski','Rodd'].map(function(m){var sess=fdate(D.thr,c).filter(function(t){return (m==='Rodd'?isRow(t):t.type===m)&&!isDL(t.date)&&num(t.meters)!=null;});var disp=m==='Rodd'?'Row':m;if(!sess.length)return '<div style="margin-bottom:8px"><b>'+disp+'</b> <span class="na">no data</span></div>';var lastS=sess[sess.length-1];var struct=lastS.ints+'×'+lastS.len;var same=sess.filter(function(t){return (t.ints+'×'+t.len)===struct;});var lastM=num(lastS.meters);var prevS=same.length>=2?same[same.length-2]:null;var prevM=prevS?num(prevS.meters):null;
- var dgL=num(lastS.drag),dgP=prevS?num(prevS.drag):null;
- var dragMismatch=(dgL!=null&&dgP!=null&&dgL!==dgP);
- var dragTag=dgL==null?'<span class="na" style="font-size:10px">drag —</span>':(dragMismatch?'<span class="bdelta warn">drag '+dgL+' vs '+dgP+' — not comparable</span>':'<span style="color:var(--mut);font-size:10px">drag '+dgL+(dgL===dgP?' (matched)':'')+'</span>');
- var delta=(prevM!=null&&!dragMismatch)?lastM-prevM:null;var ms=same.map(function(t){return P(num(t.meters),fmtN(num(t.meters))+' m ('+t.ints+'×'+t.len+')',t.date);});return '<div style="margin-bottom:12px"><b style="color:var(--ink)">'+disp+'</b> <span style="color:var(--mut);font-size:10px">'+struct+'</span> '+dragTag+'<div style="font-size:18px;font-weight:800;color:var(--acc)">'+fmtN(lastM)+' m'+(delta!=null?' <span style="font-size:11px;color:'+(delta>=0?'var(--good)':'var(--warn)')+'">'+(delta>=0?'+':'')+delta+'</span>':'')+'</div><div style="font-size:9px;color:var(--mut)">Beat today</div>'+spark(ms,false,'spark','Total meters, same structure — higher is better.')+'</div>';}).join('');
-var _zm=zoneMins(c);var _zt=_zm.reduce(function(a,b){return a+b;},0)||1;var _z24=Math.round((_zm[2]+_zm[4])/_zt*100);var zoneBody=zoneWidget(_zm)+'<div class="foot-note">'+(_zt>1?((_zt/60).toFixed(1)+' h from logged zone splits'):'No zone split logged yet')+(_zm.skipped?(' · '+_zm.skipped+' session'+(_zm.skipped===1?'':'s')+' without split — not counted'):' · every session has a split')+'</div>';document.getElementById('lens3eng').innerHTML=[
-  mpanel('eng','Threshold Ski /500m','Ski only · vs best Ski',mmss((last(tSki)||{}).v),chipBest(tSki,true),tSki,bestOf(tSki,true),null,'SkiErg threshold pace per 500 m — lower is faster. Never mixed with Row.'),
-  mpanel('eng','Threshold Row /500m','Row only · vs best Row',mmss((last(tRowE)||{}).v),chipBest(tRowE,true),tRowE,bestOf(tRowE,true),null,'RowErg threshold pace per 500 m — lower is faster. Never mixed with Ski.'),
-  panel('eng','Threshold — meters to beat','Same structure · higher is better',metersBody),
+ // ══ TROSKELN, MODALITETSAGNOSTISK (build 3.13) ═══════════════════════
+ // Korten drivs av de `Type`-varden som FAKTISKT ligger i fonstret, sorterade pa
+ // senaste anvandning. Ingen modalitetslista, ingen veckoordning, ingen fas i
+ // koden: modalitetsplanen i master gar att skriva om utan att en rad kod ror sig.
+ // En modalitet utan rader i fonstret ritas INTE alls — inte som ett tomt kort.
+ // Rodd exkluderas aldrig explicit. Den forsvinner nar dess rader rullar ur
+ // fonstret, och dyker en rodd-troskel upp igen SKA den synas: en rad som
+ // motsager planen ar information, inte skrap. En hardkodad if(type==='Row')
+ // vore samma dod-vakt-monster som ENUMS-nyckeln 'Bike'.
+ function thrBlocks(){
+   var rows=fdate(D.thr,c).filter(function(t){return t.type&&String(t.type).trim()&&!isDL(t.date);});
+   var by={};
+   rows.forEach(function(t){var k=String(t.type).trim();(by[k]=by[k]||[]).push(t);});
+   return Object.keys(by).filter(function(k){return THR_MODES[k];})
+     .sort(function(a,b){var la=last(by[a]).date,lb=last(by[b]).date;return la<lb?1:(la>lb?-1:0);})
+     .map(function(k){
+       var M=THR_MODES[k],all=by[k],ls=last(all),struct=ls.ints+'×'+ls.len;
+       // STRUKTUR OCH KONTROLLVARIABEL AVGOR JAMFORBARHETEN — pa pace-panelen lika
+       // val som pa metrarna. Serien innehol 5x6, 3x10 OCH deload-2x10 samtidigt,
+       // sa "best yet" kunde jamfora ett 3x10 mot ett 5x6 och kalla det framsteg.
+       var comp=all.filter(function(t){return (t.ints+'×'+t.len)===struct;});
+       var cl=num(ls[M.ctrl]),prev=comp.length>=2?comp[comp.length-2]:null,cp=prev?num(prev[M.ctrl]):null;
+       return {key:k,M:M,all:all,comp:comp,last:ls,struct:struct,
+               ctrl:cl,ctrlPrev:cp,ctrlDiff:(cl!=null&&cp!=null&&cl!==cp),
+               dropped:all.length-comp.length};
+     });
+ }
+ function thrSeries(b){
+   return b.comp.filter(function(t){return psec(t[b.M.pace])!=null;})
+     .map(function(t){return P(psec(t[b.M.pace]),mmss(psec(t[b.M.pace]))+' '+b.M.unit+' '+b.M.label+' ('+t.ints+'×'+t.len+')',t.date);});
+ }
+ // Kontrollvariabeln: ski/rodd = drag factor, lopning = lutning (master §6).
+ function ctrlTag(b){
+   var nm=b.M.ctrl==='drag'?'drag factor':'incline';
+   if(b.ctrl==null)return '<span class="nain">'+nm+' not logged</span>';
+   if(b.ctrlDiff)return '<span class="bdelta warn">'+b.M.ctrlTxt(b.ctrl)+' vs '+b.M.ctrlTxt(b.ctrlPrev)+' — not comparable</span>';
+   return '<span style="color:var(--mut)">'+b.M.ctrlTxt(b.ctrl)+'</span>';
+ }
+ // SPRIDNINGEN MELLAN INTERVALLERNA — troskelpassets viktigaste tal. Den gar inte
+ // att rakna ur ett snitt, darfor kolumnen `Interval splits` (schema v10).
+ function spreadOf(t){
+   var xs=splitList(t&&t.splits); if(!xs||xs.length<2)return null;
+   var mn=Math.min.apply(0,xs),mx=Math.max.apply(0,xs);
+   var mean=xs.reduce(function(a,b){return a+b;},0)/xs.length;
+   return {n:xs.length,min:mn,max:mx,range:mx-mn,mean:mean,pct:mean?(mx-mn)/mean*100:null,vals:xs};
+ }
+ // BANDET HALLS, JAGAS ALDRIG. Malbanden ar INTE satta — ett kalibreringspass per
+ // modalitet skriver in dem i master. Tills dess sags det rakt ut; ett pahittat
+ // band ar samma sorts fel som en pahittad pace.
+ function bandOf(k){var b=(cfg.bands||{})[k];return (b&&b.lo&&b.hi&&psec(b.lo)!=null&&psec(b.hi)!=null)?{lo:psec(b.lo),hi:psec(b.hi),txt:b.lo+'–'+b.hi}:null;}
+ var thrB=thrBlocks();
+ var uncal=[];
+ var bandBody=thrB.length?thrB.map(function(b){
+   var sp=spreadOf(b.last),bd=bandOf(b.key),ef=num(b.last.effort);
+   var head;
+   if(bd&&sp){
+     var inB=sp.vals.filter(function(v){return v>=bd.lo&&v<=bd.hi;}).length;
+     head='<div class="kvv">'+inB+' / '+sp.n+'<small> intervals in band '+bd.txt+' '+b.M.unit+'</small></div>';
+   } else if(sp){
+     head='<div class="kvv">'+mmss(sp.range)+'<small> spread across '+sp.n+' intervals'+(sp.pct!=null?' · '+sp.pct.toFixed(1)+'%':'')+'</small></div>';
+   } else {
+     head='<div class="na">Interval splits not logged — the spread cannot be measured</div>';
+   }
+   if(!bd)uncal.push(b.M.label);
+   var notes=[];
+   if(bd&&sp)notes.push('Spread '+mmss(sp.range)+' across '+sp.n+' intervals'+(sp.pct!=null?' · '+sp.pct.toFixed(1)+'%':''));
+   if(ef!=null)notes.push('Effort '+ef+'/10'+(ef>=9?' — the band was set too high':''));
+   var read=[];
+   var pv=psec(b.last[b.M.pace]); if(pv!=null)read.push(mmss(pv)+' '+b.M.unit);
+   var mv=num(b.last.meters); if(mv!=null)read.push(fmtN(mv)+' m');
+   var wv=num(b.last.watt); if(wv!=null)read.push(Math.round(wv)+' W');
+   return '<div style="margin-bottom:14px"><div class="kv"><span class="kvl">'+b.M.label+' · '+b.struct+'</span>'
+     +(ef!=null&&ef>=9?'<span class="bdelta warn">effort '+ef+'/10</span>':'')+'</div>'
+     +head
+     +(notes.length?'<div class="foot-note">'+notes.join(' · ')+'</div>':'')
+     +'<div class="foot-note">'+ctrlTag(b)+(read.length?' · '+read.join(' · ')+' — a readout, never the target':'')+'</div></div>';
+ }).join(''):'<div class="na">No threshold session logged in this window.</div>';
+ // Skalet sags EN gang per kort, inte en gang per modalitet: tre identiska rader
+ // om samma sak laser man forbi, och da forsvinner det som faktiskt star dar.
+ if(uncal.length)bandBody+='<div class="foot-note">Band not calibrated for '+uncal.join(' · ')
+   +' — the spread is the signal until one calibration session per modality writes the band into master.</div>';
+var _zm=zoneMins(c);var _zt=_zm.reduce(function(a,b){return a+b;},0)||1;var _z24=Math.round((_zm[2]+_zm[4])/_zt*100);var zoneBody=zoneWidget(_zm)+'<div class="foot-note">'+(_zt>1?((_zt/60).toFixed(1)+' h from logged zone splits'):'No zone split logged yet')+(_zm.skipped?(' · '+_zm.skipped+' session'+(_zm.skipped===1?'':'s')+' without split — not counted'):' · every session has a split')+'</div>';document.getElementById('lens3eng').innerHTML=[].concat(thrB.map(function(b){
+   var srs=thrSeries(b);
+   var foot=b.dropped?'<div class="foot-note">'+b.dropped+' session'+(b.dropped===1?'':'s')+' on another structure — not plotted</div>':'';
+   return mpanel('eng','Threshold '+b.M.label+' '+b.M.unit,
+     b.struct+(b.ctrl!=null?' · '+b.M.ctrlTxt(b.ctrl):'')+' · lower is faster',
+     mmss((last(srs)||{}).v),
+     b.ctrlDiff?{cls:'warn',txt:'control changed'}:chipBest(srs,true),
+     srs,bestOf(srs,true),
+     bspark(srs,bestOf(srs,true))+foot,
+     b.M.label+' threshold pace per '+(b.M.unit==='/km'?'km':'500 m')+' — lower is faster. Only sessions on the same structure ('+b.struct+') are plotted; modalities are never mixed.');
+ })).concat([
+  panel('eng','Threshold — band adherence','Held the band · spread between intervals · metres are a readout',bandBody),
   mpanel('eng','Roncevic total','Race-sim · training side · vs your best',mmss((last(rt)||{}).v),chipBest(rt,true),rt,bestOf(rt,true),null,'Roncevic race-sim total — training data, never compared to race goals.'),
-  (function(){var vp=fdate(D.vo2||[],c).filter(function(x){return psec(x.pace)!=null;}).map(function(x){return P(psec(x.pace),mmss(psec(x.pace))+' /km',x.date);});var parts=[];
-   if(tRun.length)parts.push(panel('eng','Run threshold /km','Race-pace runs · lower is faster',bigspark(tRun,true,'Running threshold pace per km — lower is faster.')));
-   if(vp.length)parts.push(panel('eng','VO2 / intervals — pace','Z5–6 · lower is faster',bigspark(vp,true,'VO2 interval pace per km — lower is faster.')));
-   if(!parts.length)parts.push(panel('eng','Coming next','Slots open when first logged','<div class="na" style="padding:8px 0;line-height:1.9">Run threshold /km — Phase 2<br>VO2 intervals — when programmed</div>'));
-   return parts.join('');})()
- ].join('');
+  (function(){var vp=fdate(D.vo2||[],c).filter(function(x){return psec(x.pace)!=null;}).map(function(x){return P(psec(x.pace),mmss(psec(x.pace))+' /km',x.date);});
+   if(vp.length)return panel('eng','VO2 / intervals — pace','Z5–6 · lower is faster',bigspark(vp,true,'VO2 interval pace per km — lower is faster.'));
+   // Platshallaren namner bara det som FAKTISKT inte ar loggat an. Den sa
+   // "Run threshold /km — Phase 2" langt efter att lop-troskeln blivit forstaklass.
+   if(thrB.length)return '';
+   return panel('eng','Coming next','Slots open when first logged','<div class="na" style="padding:8px 0;line-height:1.9">Threshold — when the first session is logged<br>VO2 intervals — when programmed</div>');})()
+ ]).join('');
 document.getElementById('engine').innerHTML=[
   (function(){var cw=iso(now);var comp=vkk.filter(function(k){return k<cw;});var lastC=comp.length?vv[comp[comp.length-1]]:null;var sofar=vv[cw]!=null?vv[cw]:0;
    var prevC=comp.length>1?vv[comp[comp.length-2]]:null;
@@ -571,7 +713,12 @@ document.getElementById('engine').innerHTML=[
   (function(){
    // Lagintensiv volym klassas pa PASSETS TYP (Zone-kolumnen), aldrig pa var pulsen hamnade.
    // Se master, "Hur ett pass klassas": session-goal-klassificering, inte time-in-zone.
-   var LOW=function(z){return /^Z[12]$/i.test(String(z==null?'':z).trim());};
+   // Samma regel som isLowZone — passtypen, aldrig pulsen.
+   // MEDVETET BARA Running + BikeErg: Threshold har ingen `Zone`-kolumn, sa
+   // uppvarmning och nedvarvning pa ett troskelpass raknas aldrig har. Det ar
+   // KORREKT och ska inte 'lagas' — kortet svarar 'hur mycket lagintensivt har
+   // jag lagt', och ett troskelpass ar inte ett lagintensivt pass.
+   var LOW=isLowZone;
    var lv={},ln={};
    var add=function(arr,tf){byd(arr).forEach(function(r){if(!r.date||!LOW(r.zone))return;
      var k=iso(pd(r.date)),m=num(tf(r));if(m==null)return;lv[k]=(lv[k]||0)+m;ln[k]=(ln[k]||0)+1;});};
@@ -592,9 +739,9 @@ document.getElementById('engine').innerHTML=[
     +'<div class="axis"><span>this wk so far: '+(sofar/60).toFixed(1)+' h · '+nSofar+' pass</span><span>'
     +(avg4!=null?'4-wk avg '+(avg4/60).toFixed(1)+' h':'')+'</span></div>',
     'Weekly hours of low-intensity work — easy/long runs and steady bike — classified by what the session was FOR (its Zone label), never by where heart rate landed. A Z2 session that sits mostly in HR Z1 still counts in full: that is how session-goal classification works, and volume is what builds the aerobic base. Ramp target +10-15%/wk.');})(),
-  mpanel('eng','Run cadence','Running economy · goal '+cfg.goals.cad+'+ spm',((last(cadS)||{}).v!=null?(last(cadS)||{}).v+' spm':'—'),chipGoal((last(cadS)||{}).v,cfg.goals.cad,true),cadS,cfg.goals.cad,null,'Running cadence in steps/min — shorter steps, better economy. Goal 170+.'),
+  mpanel('eng','Run cadence','Running economy · road + treadmill threshold · goal '+cfg.goals.cad+'+ spm',((last(cadS)||{}).v!=null?(last(cadS)||{}).v+' spm':'—'),chipGoal((last(cadS)||{}).v,cfg.goals.cad,true),cadS,cfg.goals.cad,null,'Running cadence in steps/min — shorter steps, better economy. Goal 170+.'),
   mpanel('eng','Z2 BikeErg watt','At fixed easy HR · higher = better'+(function(){var r=fdate(D.bike,c).filter(function(b){return num(b.drag)!=null;});return r.length?' · drag '+num(r[r.length-1].drag):'';})(),((last(wa)||{}).v!=null?Math.round((last(wa)||{}).v)+' W':'—'),chipBest(wa,false),wa,bestOf(wa,false),null,'Z2 bike power at fixed easy HR — higher = more efficient engine.'),
-  mpanel('eng span','Engine — time by zone','Where the engine is built · Z2 durability + Z4 threshold = the workhorses (coach)',((_zt>1?(_zt/60).toFixed(1):'—')+'<small> h engine</small>'),(_zt>1?{cls:'acc',txt:'Z2+Z4 '+_z24+'%'}:null),null,null,zoneBody,'Training time across the 5 lab-calibrated zones. One rule, no exceptions: a session counts only if it has a logged zone split — watch raw split on run, threshold, Hyrox, Roncevic and Joker; erg-app split (bike-calibrated) on BikeErg. Sessions without a split are not counted and are named below the bars. Threshold quality is judged by meters/500m — never by HR.')
+  mpanel('eng span','Engine — time by zone','Where the engine is built · Z2 durability + Z4 threshold = the workhorses (coach)',((_zt>1?(_zt/60).toFixed(1):'—')+'<small> h engine</small>'),(_zt>1?{cls:'acc',txt:'Z2+Z4 '+_z24+'%'}:null),null,null,zoneBody,'Training time across the 5 lab-calibrated zones. One rule, no exceptions: a session counts only if it has a logged zone split — watch raw split on run, threshold, Hyrox, Roncevic and Joker; erg-app split (bike-calibrated) on BikeErg. Sessions without a split are not counted and are named below the bars. Threshold quality is judged by whether a predetermined output band was HELD and by the spread between intervals — never by HR, and never by total metres.')
  ].join('');
 function stLast(f){var a=byd(D.hyrox).map(function(h){return num(h[f]);}).filter(function(v){return v!=null;});return a.length?a[a.length-1]:null;}
 function stRow(name,f,pro,unit){var rows=byd(D.hyrox).filter(function(h){return num(h[f])!=null;});
@@ -674,7 +821,17 @@ if(ll){var spd=[10,11,12,13],la=[num(ll.l10),num(ll.l11),num(ll.l12),num(ll.l13)
   return '<div class="card tile" data-desc="Calibrated max test — always rested, same protocol, deload weeks only. Drag factor must match the previous test or the comparison measures the machine, not the engine."><div class="thd"><div class="lb">'+t[0]+'</div>'+(function(){var dragBad=(dgL!=null&&dgP!=null&&dgL!==dgP);
     if(dragBad)return '<span class="bdelta warn">not comparable</span>';
     var cb=chipBest(srs,t[3]);return cb&&cb.txt?'<span class="bdelta '+cb.cls+'">'+cb.txt+'</span>':'';})()+'</div><div class="val">'+(t[3]?mmss(lastV.v):lastV.d)+'</div>'+metaRow+bspark(srs,null)+'</div>';});
- var sched='<div class="card" style="margin-bottom:10px" data-desc="Test schedule — one all-out test per test day, never two. Compare at the same HR; ≥3% divergence = tired body, not lost form."><div style="font-size:12px;line-height:1.9"><b style="color:var(--acc)">Next:</b> 2K Ski (Tue) + 2K Row (Thu) · <b>W37 · Sep 7–13</b><br><b style="color:var(--acc)">Then:</b> FTP Bike (Tue) + 5K Run (Thu) · <b>W41 · Oct 5–11</b><span style="color:var(--mut)"> — quarterly</span></div></div>';
+ // Testschemat las UR CONFIG, aldrig ur ett vecko-ID i koden. Literalen sa
+ // 'W37 · Sep 7-13' langt efter att den veckan kunde flyttas, och nasta-test-kortet
+ // gissade testet ur strangen 'W41'. Flyttas en testvecka rors ingen kodrad.
+ var _tw=(cfg.phases||[]).filter(function(p){return /test/.test(p[3])&&pd(p[1])>=now;}).slice(0,2);
+ var _lbl=['Next:','Then:'];
+ var sched=_tw.length?('<div class="card" style="margin-bottom:10px" data-desc="Test schedule — one all-out test per test day, never two. Compare at the same HR; 3%+ divergence = tired body, not lost form."><div style="font-size:12px;line-height:1.9">'
+   +_tw.map(function(p,i){var a=pd(p[0]),b=pd(p[1]);var qm=/\u00b7\s*quarterly/.test(String(p[4]||''));
+     return '<b style="color:var(--acc)">'+_lbl[i]+'</b> '+String(p[4]||'Tests per the plan').replace(/\s*\u00b7\s*quarterly\s*$/,'')
+       +' · <b>'+p[2]+' · '+_MN[a.getMonth()]+' '+a.getDate()+'\u2013'+(a.getMonth()===b.getMonth()?'':_MN[b.getMonth()]+' ')+b.getDate()+'</b>'
+       +(qm?'<span style="color:var(--mut)"> \u2014 quarterly</span>':'');}).join('<br>')
+   +'</div></div>'):'';
  document.getElementById('tests').innerHTML=sched+'<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">'+tiles.join('')+'</div>';
 })();document.getElementById('labrow').innerHTML=vo2card(last(vo2))+'<div class="card panel" data-desc="Blood lactate vs running speed — sets your training zones."><h3 style="color:var(--acc)">Lactate curve · Lens 1</h3><div class="sub">Jan 2026 baseline · sets zones</div>'+(lac||'<div class="na">Awaiting lab</div>')+'</div>';
 function benchCard(){
@@ -853,6 +1010,41 @@ function selftest(raw){
   t('Field position har mätdata', function(){
     var f=adapt(raw).field.filter(function(r){return r.st&&r.med!=null;});
     return f.length ? {ok:true, note:f.length+' stationer'} : {ok:false, note:'kortet skulle rendera tomt'}; });
+  // ── TROSKELN PA TVA MODALITETER (build 3.13 / schema v10) ──────────
+  t('Löp-tröskeln räknas in i run-volymen', function(){
+    var d=adapt(raw).thr.filter(function(x){return x.type==='Run';});
+    if(!d.length) return {ok:true, note:'ingen löp-tröskel i fönstret'};
+    var bad=d.filter(function(x){return thrKm(x)<=0;});
+    return bad.length ? {ok:false, note:bad.length+' rad(er) ger 0 km — varken Total meters eller struktur × Pace /km'}
+                      : {ok:true, note:d.length+' rad(er) · '+d.reduce(function(a,x){return a+thrKm(x);},0).toFixed(1)+' km'}; });
+  t('Z2-räknaren räknar bara Z1/Z2', function(){
+    var thru=['Z3','Z4','Z5','','Zon','Z12'].filter(isLowZone);
+    var hit=['Z1','Z2','z1',' Z2 '].filter(isLowZone).length;
+    return (!thru.length&&hit===4) ? {ok:true, note:'Z1 · Z2'}
+      : {ok:false, note:'släpper igenom '+(thru.join(', ')||'—')+' · matchar '+hit+'/4 lågintensiva'}; });
+  t('Varje Threshold.Type har en rendering', function(){
+    var d=modeGuard();
+    return d.length ? {ok:false, note:'utan kort: '+d.join(', ')}
+                    : {ok:true, note:Object.keys(THR_MODES).join(' · ')}; });
+  t('Spridning och band räknas ur intervallsplitsen', function(){
+    var xs=splitList('1:55.2 · 1:57.0 · 1:56.0');
+    if(!xs||xs.length!==3) return 'splitList gav '+JSON.stringify(xs);
+    var range=Math.max.apply(0,xs)-Math.min.apply(0,xs);
+    if(Math.abs(range-1.8)>0.01) return 'spridningen blev '+range.toFixed(2)+' s, väntade 1.80';
+    var inB=xs.filter(function(v){return v>=psec('1:55')&&v<=psec('1:56.5');}).length;
+    return inB===2 ? {ok:true, note:'spridning 1.80 s · 2/3 i bandet 1:55–1:56.5'}
+                   : {ok:false, note:inB+'/3 i bandet'}; });
+  t('Satta målband har både lo och hi', function(){
+    var b=CONFIG.bands||{}, set=Object.keys(b).filter(function(k){return b[k];});
+    var half=set.filter(function(k){return !(b[k].lo&&b[k].hi);});
+    return half.length ? {ok:false, note:'halvt band: '+half.join(', ')}
+      : {ok:true, note:set.length?('kalibrerade: '+set.join(', ')):'inga band satta än — kortet säger det i klartext'}; });
+  t('Testschemat kommer ur CONFIG, inte ur koden', function(){
+    var tw=(CONFIG.phases||[]).filter(function(p){return /test/.test(p[3]);});
+    var utan=tw.filter(function(p){return !p[4];}).map(function(p){return p[2];});
+    return utan.length ? {ok:false, note:'testvecka utan testplan: '+utan.join(', ')}
+                       : {ok:true, note:tw.length+' testveckor, alla med plan'}; });
+
   t('Inga fynd i dataintegritetskontrollen', function(){
     return DQ.length ? {ok:false, note:DQ.length+' fynd — se listan nedan'} : true; });
 
