@@ -9,80 +9,116 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Athlete Signal ⚡">
 <style>
-:root{--bg:#0d1117;--pan:#161c26;--pan2:#1d2531;--line:#2a3543;--ink:#e8edf3;--mut:#8a97a6;
---logo:#fff;--acc:#3b82f6;--acc2:#f97316;--good:#22c55e;--warn:#eab308;--bad:#ef4444}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
-.wrap{max-width:1150px;margin:0 auto;padding:16px}
+:root{
+/* TYPSKALA — sex namngivna steg. Minsta ar 12 px: under det slutar text vara
+   last och blir dekor, och dashboarden lases pa en telefon i ett gym.
+   Ingen font-size i filen far vara ett rat px-tal — grinden raknar dem. */
+--fs-xs:12px;--fs-sm:13px;--fs-md:16px;--fs-lg:19px;--fs-xl:24px;--fs-2xl:30px;
+--lh-tight:1.25;--lh-body:1.5;
+/* SPACING — samma steg overallt, sa taten ar en instalning och inte 40 gissningar. */
+--sp-1:4px;--sp-2:6px;--sp-3:8px;--sp-4:11px;--sp-5:14px;--sp-6:18px;--sp-7:24px;
+--r-sm:8px;--r-md:12px;--r-lg:16px;
+/* FARGER. --acc och --bad ar ljusare an fore 28 aug: de gamla vardena lag pa
+   4,19 respektive 4,10 mot --pan2 och foll darmed under 4,5:1 for brodtext.
+   Matt ur computed style, inte uppskattat. */
+--bg:#0d1117;--pan:#161c26;--pan2:#1d2531;--line:#2a3543;--ink:#e8edf3;--mut:#8a97a6;
+--logo:#fff;--acc:#5392f7;--acc2:#f97316;--good:#22c55e;--warn:#eab308;--bad:#f26565;
+--focus:#8ab4ff}
+*{box-sizing:border-box}small{font-size:var(--fs-xs)}
+/* FOKUSRINGEN AR INTE DEKOR. Allt som gar att na med tangentbord ska SYNAS
+   nar det nas — annars ar tangentbordsvagen en teoretisk vag. */
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:var(--r-sm)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.wrap{max-width:1150px;margin:0 auto;padding:var(--sp-5) var(--sp-4)}
+@media(min-width:430px){.wrap{padding:var(--sp-6)}}
+@media(min-width:1024px){.wrap{padding:var(--sp-7)}}
 .head{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:14px}
-.title{font-size:16px;font-weight:800;line-height:1.25}.title span{color:var(--acc)}
+.title{font-size:var(--fs-md);font-weight:800;line-height:1.25}.title span{color:var(--acc)}
 .badges{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
-.badge{font-size:10px;font-weight:600;border:1px solid var(--line);border-radius:6px;padding:3px 7px;color:var(--mut)}.badge b{color:var(--ink)}
-.cd{text-align:right}.cd .n{font-size:30px;font-weight:800;color:var(--acc);line-height:1}.cd .l{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.07em}
-h2.sl{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--mut);margin:22px 0 10px;font-weight:700;display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
-h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-size:10px;text-align:right;flex-shrink:1}
-.grid{display:grid;gap:10px}
-.status{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
-.cockpit{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.badge{font-size:var(--fs-xs);font-weight:600;border:1px solid var(--line);border-radius:6px;padding:3px 7px;color:var(--mut)}.badge b{color:var(--ink)}
+.cd{text-align:right}.cd .n{font-size:var(--fs-2xl);font-weight:800;color:var(--acc);line-height:1}.cd .l{font-size:var(--fs-xs);color:var(--mut);text-transform:uppercase;letter-spacing:.07em}
+h2.sl{font-size:var(--fs-xs);letter-spacing:.11em;text-transform:uppercase;color:var(--mut);margin:22px 0 10px;font-weight:700;display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-size:var(--fs-xs);text-align:right;flex-shrink:1}
+.grid{display:grid;gap:var(--sp-4)}
+/* ETT RUTNAT SOM INTE FAR KRYMPA SPRACKER PA 360 px. Grid-barn har min-width:auto
+   som default, sa ett langt ord satter kolumnens minsta bredd och skjuter ut hela
+   raden. Matt: #status var 332 px bred i en 328 px container. */
+.grid>*{min-width:0}
+.card>*{min-width:0}
+.status{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.cockpit{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
 .two{grid-template-columns:1fr 1fr}.three{grid-template-columns:1fr 1fr 1fr}
-.card{background:var(--pan);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
-.k{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
-.v{font-size:18px;font-weight:700;margin-top:3px;display:flex;align-items:center;gap:8px}
+.card{background:var(--pan);border:1px solid var(--line);border-radius:var(--r-md);padding:var(--sp-4) var(--sp-4);min-width:0;overflow-wrap:anywhere}
+.k{font-size:var(--fs-xs);color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+/* KORTANATOMIN — en rad: rubrik till vanster, chip till hoger. Samma i varje
+   kort, for att den kommer ur samma fabrik. */
+.chd{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-3);margin-bottom:var(--sp-2);min-width:0}
+.chd>h3,.chd>.k,.chd>.lb{margin:0;min-width:0}
+.chd>.bdelta,.chd>.sig{flex:0 0 auto;white-space:nowrap}
+/* Proveniens-chippen: inte ett omdome, utan var siffran kommer ifran. */
+.bdelta.meta{background:transparent;border:1px solid var(--line);color:var(--mut);font-weight:600}
+/* Ett tomt varde bar sitt skal. */
+.why{font-size:var(--fs-xs);color:var(--mut);margin-top:var(--sp-2);line-height:var(--lh-body)}
+.card:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.v{font-size:var(--fs-lg);font-weight:700;margin-top:var(--sp-1);display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;min-width:0}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
 .g{background:var(--good)}.y{background:var(--warn)}.r{background:var(--bad)}.b{background:var(--acc)}
-.tile .lb{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+.tile .lb{font-size:var(--fs-xs);color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
 .tile .row{display:flex;justify-content:space-between;align-items:flex-end;margin-top:3px}
-.tile .val{font-size:19px;font-weight:800}.tile .val small{font-size:11px;color:var(--mut);font-weight:600}
-.tr{font-size:12px;font-weight:800}
+.tile .val{font-size:var(--fs-lg);font-weight:800}.tile .val small{font-size:var(--fs-xs);color:var(--mut);font-weight:600}
+.tr{font-size:var(--fs-sm);font-weight:800}
 .spark{width:100%;height:26px;margin-top:6px;display:block}.bigspark{width:100%;height:56px;display:block}
-.panel h3{margin:0 0 1px;font-size:12px}.panel .sub{font-size:9px;color:var(--mut);margin-bottom:6px}
+.panel h3{margin:0 0 1px;font-size:var(--fs-sm)}.panel .sub{font-size:var(--fs-xs);color:var(--mut);margin-bottom:6px}
 .eng h3{color:var(--acc)}.cha h3{color:var(--acc2)}
 .bars{display:flex;align-items:flex-end;gap:4px;height:56px}.bars>div{flex:1;background:var(--acc);border-radius:3px 3px 0 0;min-height:2px}
 .bars>div.wip{background:transparent;border:1.5px dashed var(--acc);opacity:.9}
-.axis{display:flex;justify-content:space-between;font-size:9px;color:var(--mut);margin-top:4px}
-.prog{margin-bottom:10px}.prog .t{display:flex;flex-wrap:wrap;gap:1px 10px;justify-content:space-between;font-size:11px;margin-bottom:4px}.nain{color:var(--mut);font-style:italic;font-size:11px}.wtag{white-space:nowrap;opacity:.6}
-.prog .pctl{font-size:9px;color:var(--mut);margin-bottom:3px}
+.axis{display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--mut);margin-top:4px}
+.prog{margin-bottom:10px}.prog .t{display:flex;flex-wrap:wrap;gap:1px 10px;justify-content:space-between;font-size:var(--fs-xs);margin-bottom:4px}.nain{color:var(--mut);font-style:italic;font-size:var(--fs-xs)}.wtag{white-space:nowrap;opacity:.6}
+.prog .pctl{font-size:var(--fs-xs);color:var(--mut);margin-bottom:3px}
 .trk{height:8px;background:var(--pan2);border-radius:5px;overflow:hidden}.trk>span{display:block;height:100%;background:var(--acc2)}
 .trk.blue>span{background:var(--acc)}
-.lamps{display:flex;gap:6px}.lamp{flex:1;text-align:center;font-size:9px;color:var(--mut)}
-.lc{width:30px;height:30px;border-radius:50%;margin:0 auto 5px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--mut)}
+.lamps{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--sp-2)}
+@media(max-width:520px){.lamps{grid-template-columns:repeat(3,1fr);row-gap:var(--sp-4)}}.lamp{text-align:center;font-size:var(--fs-xs);color:var(--mut);min-width:0;overflow-wrap:normal;hyphens:none}
+.lc{width:30px;height:30px;border-radius:50%;margin:0 auto 5px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);color:var(--mut)}
 .lc.on{background:var(--good);border-color:var(--good);color:#06240f;font-weight:800}
 .rules{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-.rule{font-size:9px;background:var(--pan2);border-radius:6px;padding:4px 8px;display:flex;gap:5px;align-items:center}
+.rule{font-size:var(--fs-xs);background:var(--pan2);border-radius:6px;padding:4px 8px;display:flex;gap:5px;align-items:center}
 .stack{display:flex;height:16px;border-radius:5px;overflow:hidden;margin:6px 0}.stack>span{display:block;height:100%}
-.legend{display:flex;gap:10px;font-size:9px;color:var(--mut);flex-wrap:wrap}.legend i{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:3px}
-.na{color:var(--mut);font-style:italic;font-size:11px}
-.road{display:flex;gap:3px;overflow-x:auto;padding:6px 3px}.road>div{flex:1 0 54px;text-align:center;font-size:9px;color:var(--mut);line-height:1.3}
+.legend{display:flex;gap:10px;font-size:var(--fs-xs);color:var(--mut);flex-wrap:wrap}.legend i{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:3px}
+.na{color:var(--mut);font-style:italic;font-size:var(--fs-xs)}
+.road{display:flex;gap:3px;overflow-x:auto;padding:6px 3px}.road>div{flex:1 0 54px;text-align:center;font-size:var(--fs-xs);color:var(--mut);line-height:1.3}
 .rb{height:16px;border-radius:2px;margin-bottom:11px;background:var(--pan2)}.rb.dl{background:var(--warn)}.rb.now{height:22px;outline:2px solid var(--acc);outline-offset:2px;box-shadow:0 0 0 5px rgba(59,130,246,.16)}
 .road>div.nowcol{color:var(--ink);font-weight:800}
 
-.nowtag{display:block;font-size:8px;letter-spacing:.10em;color:var(--acc);font-weight:800;margin-bottom:9px;line-height:1}.rb.race{background:var(--acc2)}
-.gaprow{margin-bottom:8px}.gaprow .gl{display:flex;justify-content:space-between;font-size:9px;color:var(--mut);margin-bottom:3px}
+.nowtag{display:block;font-size:var(--fs-xs);letter-spacing:.10em;color:var(--acc);font-weight:800;margin-bottom:9px;line-height:1}.rb.race{background:var(--acc2)}
+.gaprow{margin-bottom:8px}.gaprow .gl{display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--mut);margin-bottom:3px}
 .gtr{height:8px;background:var(--pan2);border-radius:5px;position:relative}.gtr .m{position:absolute;top:-1px;width:2px;height:10px;background:var(--acc)}
-.filters{display:flex;gap:6px}.fbtn{font-size:10px;border:1px solid var(--line);background:var(--pan);color:var(--mut);border-radius:6px;padding:4px 10px;cursor:pointer}.fbtn.on{background:var(--acc);color:#fff;border-color:var(--acc)}
-.quote{margin:12px 0 0;padding:10px 14px;border-left:3px solid var(--acc);background:var(--pan);border-radius:0 10px 10px 0;font-size:13px;font-style:italic;color:var(--ink)}.quote span{font-style:normal;color:var(--mut);font-size:10px;display:block;margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
-#tt{position:fixed;display:none;background:#0b1220;border:1px solid var(--line);color:var(--ink);font-size:11px;padding:5px 8px;border-radius:6px;pointer-events:none;z-index:99;box-shadow:0 4px 14px rgba(0,0,0,.5);line-height:1.35}
-.foot{margin-top:24px;border-top:1px solid var(--line);padding-top:12px;font-size:10px;color:var(--mut);line-height:1.6}
+.filters{display:flex;gap:6px}.fbtn{font-size:var(--fs-xs);border:1px solid var(--line);background:var(--pan);color:var(--mut);border-radius:6px;padding:4px 10px;cursor:pointer}.fbtn.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.quote{margin:12px 0 0;padding:10px 14px;border-left:3px solid var(--acc);background:var(--pan);border-radius:0 10px 10px 0;font-size:var(--fs-sm);font-style:italic;color:var(--ink)}.quote span{font-style:normal;color:var(--mut);font-size:var(--fs-xs);display:block;margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+#tt{position:fixed;display:none;background:#0b1220;border:1px solid var(--line);color:var(--ink);font-size:var(--fs-xs);padding:5px 8px;border-radius:6px;pointer-events:none;z-index:99;box-shadow:0 4px 14px rgba(0,0,0,.5);line-height:1.35}
+.foot{margin-top:24px;border-top:1px solid var(--line);padding-top:12px;font-size:var(--fs-xs);color:var(--mut);line-height:1.6}
 .card{transition:border-color .15s ease,transform .15s ease}
 .card:hover{border-color:#3a4658}
 .cockpit .tile{min-height:106px;display:flex;flex-direction:column;justify-content:space-between}
 .grid.two .panel,.grid.three .panel{min-height:124px}
 .panel .na{min-height:44px;display:flex;align-items:center;justify-content:flex-start;text-align:left;opacity:.7}
-.road>div{font-size:9px}
+.road>div{font-size:var(--fs-xs)}
 .gaprow:last-child{border-bottom:none !important}
-.subt{font-size:11px;color:var(--mut);margin-top:3px}.badges .badge{display:inline-flex;align-items:center;gap:6px}.badge .logo{height:15px;width:auto;display:block;opacity:.95;color:var(--logo)}.badge.lab .logo{height:17px}.badge.spon .logo{height:13px}.cd .l2{font-size:10px;color:var(--acc);margin-top:1px;font-weight:600}.status .card{background:var(--pan2);border-top:2px solid rgba(59,130,246,.35)}.status .v{font-size:14px;margin-top:8px}.status .k{display:flex;justify-content:space-between;align-items:center;gap:8px}.span{grid-column:1/-1}@media(max-width:560px){.title{font-size:14px}.cd .n{font-size:24px}h2.sl{flex-direction:column;align-items:flex-start;gap:2px}.sl .q{text-align:left}.status{grid-template-columns:1fr 1fr}.status .card.msig,.status .card.ntest{grid-column:1/-1}.two,.three{grid-template-columns:1fr}.k,.tile .lb{font-size:11px}.status .sub2{font-size:11px}.panel .sub{font-size:10px}.zp{width:96px;font-size:10px}}
-.bcard .bhd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.bcard h3{margin:0}.bdelta{font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--pan2);color:var(--mut);white-space:nowrap}.bdelta.good{color:var(--good)}.bdelta.warn{color:var(--warn)}.bdelta.acc{color:var(--acc)}.bbig{font-size:30px;font-weight:800;line-height:1;margin:8px 0 2px}.bbig small{font-size:13px;color:var(--mut);font-weight:600;margin-left:4px}.bcard .sub{margin-bottom:10px}.bcard svg.bspark{width:100%;height:52px;display:block;margin-top:2px}.tile .thd{display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:2px}.tile svg.bspark{width:100%;height:44px;display:block;margin-top:6px}.mrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:2px 0 6px}.mval{font-size:22px;font-weight:800;line-height:1}.panel:not(.bcard) svg.bspark{width:100%;height:56px;display:block;margin-top:4px}.pill{display:inline-block;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;vertical-align:middle;margin-left:6px}.pill.green{background:rgba(34,197,94,.16);color:var(--good)}.pill.yellow{background:rgba(234,179,8,.16);color:var(--warn)}.pill.red{background:rgba(239,68,68,.16);color:var(--bad)}.tile .tsub{font-size:10px;color:var(--mut);margin:1px 0 5px;letter-spacing:.02em}.cd{text-align:right}.rc-h{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;text-align:left}.rc-row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.racecard{background:var(--pan);border:1px solid var(--line);border-radius:10px;padding:8px 12px;text-align:left;min-width:104px}.racecard.next{border-color:var(--acc);background:var(--pan2)}.rc-d{font-size:24px;font-weight:800;color:var(--acc);line-height:1}.rc-u{font-size:9px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}.rc-n{font-size:12px;font-weight:700;color:var(--ink);margin-top:6px}.rc-m{font-size:10px;color:var(--mut);margin-top:1px}.zrow{display:flex;align-items:center;gap:10px;padding:4px 0}.zn{font-size:11px;font-weight:800;width:26px;flex-shrink:0}.zp{font-size:11px;color:var(--mut);width:130px;flex-shrink:0}.zt{flex:1;height:10px;background:var(--pan2);border-radius:5px;overflow:hidden}.zt span{display:block;height:100%;border-radius:5px}.zv{font-size:11px;font-weight:700;width:96px;text-align:right;flex-shrink:0}.zv small{color:var(--mut);font-weight:500}
-.status .sub2{font-size:10.5px;color:var(--mut);margin-top:6px;line-height:1.5}.sig{display:inline-flex;align-items:center;gap:4px;margin-right:9px;font-weight:600;white-space:nowrap}.sd{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+.subt{font-size:var(--fs-xs);color:var(--mut);margin-top:3px}.badges .badge{display:inline-flex;align-items:center;gap:6px}.badge .logo{height:15px;width:auto;display:block;opacity:.95;color:var(--logo)}.badge.lab .logo{height:17px}.badge.spon .logo{height:13px}.cd .l2{font-size:var(--fs-xs);color:var(--acc);margin-top:1px;font-weight:600}.status .card{background:var(--pan2);border-top:2px solid rgba(59,130,246,.35)}.status .v{font-size:var(--fs-md);margin-top:8px}.status .k{display:flex;justify-content:space-between;align-items:center;gap:8px}.span{grid-column:1/-1}@media(max-width:560px){.title{font-size:var(--fs-md)}.cd .n{font-size:var(--fs-xl)}h2.sl{flex-direction:column;align-items:flex-start;gap:2px}.sl .q{text-align:left}.status{grid-template-columns:1fr 1fr}.status .card.msig,.status .card.ntest{grid-column:1/-1}.two,.three{grid-template-columns:1fr}.k,.tile .lb{font-size:var(--fs-xs)}.status .sub2{font-size:var(--fs-xs)}.panel .sub{font-size:var(--fs-xs)}.zp{width:96px;font-size:var(--fs-xs)}}
+.bcard .bhd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.bcard h3{margin:0}.bdelta{font-size:var(--fs-xs);font-weight:700;padding:2px 7px;border-radius:6px;background:var(--pan2);color:var(--mut);white-space:nowrap}.bdelta.good{color:var(--good)}.bdelta.warn{color:var(--warn)}.bdelta.acc{color:var(--acc)}.bbig{font-size:var(--fs-2xl);font-weight:800;line-height:1;margin:8px 0 2px}.bbig small{font-size:var(--fs-sm);color:var(--mut);font-weight:600;margin-left:4px}.bcard .sub{margin-bottom:10px}.bcard svg.bspark{width:100%;height:52px;display:block;margin-top:2px}.tile .thd{display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:2px}.tile svg.bspark{width:100%;height:44px;display:block;margin-top:6px}.mrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:2px 0 6px}.mval{font-size:var(--fs-xl);font-weight:800;line-height:1}.panel:not(.bcard) svg.bspark{width:100%;height:56px;display:block;margin-top:4px}.pill{display:inline-block;font-size:var(--fs-xs);font-weight:800;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;vertical-align:middle;margin-left:6px}.pill.green{background:rgba(34,197,94,.16);color:var(--good)}.pill.yellow{background:rgba(234,179,8,.16);color:var(--warn)}.pill.red{background:rgba(239,68,68,.16);color:var(--bad)}.tile .tsub{font-size:var(--fs-xs);color:var(--mut);margin:1px 0 5px;letter-spacing:.02em}.cd{text-align:right}.rc-h{font-size:var(--fs-xs);color:var(--mut);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;text-align:left}.rc-row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.racecard{background:var(--pan);border:1px solid var(--line);border-radius:10px;padding:8px 12px;text-align:left;min-width:104px}.racecard.next{border-color:var(--acc);background:var(--pan2)}.rc-d{font-size:var(--fs-xl);font-weight:800;color:var(--acc);line-height:1}.rc-u{font-size:var(--fs-xs);color:var(--mut);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}.rc-n{font-size:var(--fs-sm);font-weight:700;color:var(--ink);margin-top:6px}.rc-m{font-size:var(--fs-xs);color:var(--mut);margin-top:1px}.zrow{display:flex;align-items:center;gap:10px;padding:4px 0}.zn{font-size:var(--fs-xs);font-weight:800;width:26px;flex-shrink:0}.zp{font-size:var(--fs-xs);color:var(--mut);width:130px;flex-shrink:0}.zt{flex:1;height:10px;background:var(--pan2);border-radius:5px;overflow:hidden}.zt span{display:block;height:100%;border-radius:5px}.zv{font-size:var(--fs-xs);font-weight:700;width:96px;text-align:right;flex-shrink:0}.zv small{font-size:var(--fs-xs);color:var(--mut);font-weight:500}
+.status .sub2{font-size:var(--fs-xs);color:var(--mut);margin-top:6px;line-height:1.5}.sig{display:inline-flex;align-items:center;gap:4px;margin-right:9px;font-weight:600;white-space:nowrap}.sd{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
 /* Component system — all cards use these, never ad-hoc inline type */
 .kv{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.kvl{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;min-width:0}
-.kvv{font-size:19px;font-weight:800;line-height:1.15}.kvv small{font-size:11px;color:var(--mut);font-weight:600;margin-left:2px}
-.foot-note{font-size:10px;color:var(--mut);margin-top:3px;line-height:1.5}
-.twocol{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kvl{font-size:var(--fs-xs);color:var(--mut);text-transform:uppercase;letter-spacing:.04em;min-width:0}
+.kvv{font-size:var(--fs-lg);font-weight:800;line-height:1.15}.kvv small{font-size:var(--fs-xs);color:var(--mut);font-weight:600;margin-left:2px}
+.foot-note{font-size:var(--fs-xs);color:var(--mut);margin-top:3px;line-height:1.5}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4)}.twocol>*{min-width:0}
+@media(max-width:860px){.twocol{grid-template-columns:1fr}}
 .prog .pctl{flex-wrap:wrap}.prog .bdelta{flex-shrink:0}
 .frow{padding:11px 0 13px;border-bottom:1px solid var(--line)}.frow:last-of-type{border-bottom:0}
 .ftop{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:14px}
-.flab{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fval{font-size:12px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.flab{font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fval{font-size:var(--fs-sm);font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:6px}
 .fbar{position:relative;height:12px;border-radius:6px;background:#222c38;margin:0 8px}
 .fbox{position:absolute;top:0;height:10px;border-radius:5px;background:#31404f}
 .ftick{position:absolute;top:-3px;width:2px;height:18px;border-radius:1px;margin-left:-1px}
@@ -91,19 +127,19 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 .fdot{position:absolute;top:-3px;width:17px;height:17px;border-radius:50%;margin-left:-8.5px;border:3px solid var(--pan);z-index:2}
 .fdot.good{background:var(--good)}.fdot.acc{background:var(--acc)}.fdot.warn{background:var(--warn)}.fdot.bad{background:var(--bad)}
 .fdot.na{background:var(--pan);border:2px dashed var(--mut);width:14px;height:14px;margin-left:-7px;top:-2px}
-.flgd{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10px;color:var(--mut);padding-bottom:9px;border-bottom:2px solid var(--line)}
+.flgd{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:var(--fs-xs);color:var(--mut);padding-bottom:9px;border-bottom:2px solid var(--line)}
 .flgd i{display:inline-block;vertical-align:middle;margin-right:4px;font-style:normal}
 .fsw{width:14px;height:8px;border-radius:4px;background:#31404f}
 .fst{width:2px;height:10px}
 .fsd{width:9px;height:9px;border-radius:50%;background:var(--acc)}
-.fsum{display:flex;flex-wrap:wrap;gap:6px 18px;padding:9px 0;border-bottom:2px solid var(--line);font-size:11px}
+.fsum{display:flex;flex-wrap:wrap;gap:6px 18px;padding:9px 0;border-bottom:2px solid var(--line);font-size:var(--fs-xs)}
 .fsum b{font-weight:700}
-.fnote{margin-top:9px;font-size:10px;color:var(--mut);line-height:1.5}
-.fhow{font-size:10.5px;color:var(--mut);line-height:1.6;padding:2px 0 10px;border-bottom:2px solid var(--line)}
+.fnote{margin-top:9px;font-size:var(--fs-xs);color:var(--mut);line-height:1.5}
+.fhow{font-size:var(--fs-xs);color:var(--mut);line-height:1.6;padding:2px 0 10px;border-bottom:2px solid var(--line)}
 .fhow b{color:var(--ink);font-weight:700}
-.fsec{font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);font-weight:700;padding:13px 0 5px}
+.fsec{font-size:var(--fs-xs);letter-spacing:.07em;text-transform:uppercase;color:var(--mut);font-weight:700;padding:13px 0 5px}
 .fscale{position:relative;height:12px;margin:0 8px 3px}
-.fscale span{position:absolute;top:0;font-size:9px;color:var(--mut);transform:translateX(-50%);white-space:nowrap}
+.fscale span{position:absolute;top:0;font-size:var(--fs-xs);color:var(--mut);transform:translateX(-50%);white-space:nowrap}
 .frow.dim{opacity:.6}
 .fzm{position:absolute;left:25%;width:50%;top:0;height:12px;background:#38495c;box-shadow:inset 1px 0 0 #4a5d72,inset -1px 0 0 #4a5d72}
 /* Dataintegritet — hogljutt fel. Ett tomt kort far aldrig vara forklaringen. */
@@ -113,11 +149,11 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 .dqcard .chip{background:var(--bad);color:#fff;border:0}
 .dqcard.warn .chip{background:var(--warn);color:#1a1206}
 .dqlist{margin-top:8px;display:flex;flex-direction:column;gap:7px}
-.dqrow{font-size:11.5px;line-height:1.45;color:var(--ink)}
+.dqrow{font-size:var(--fs-xs);line-height:1.45;color:var(--ink)}
 .dqrow b{color:var(--bad)}
 .dqcard.warn .dqrow b{color:var(--warn)}
-.dqrow span{display:block;font-size:10.5px;color:var(--mut);margin-top:1px}
-.dqinline{font-size:10.5px;line-height:1.4;color:var(--bad);border-left:2px solid var(--bad);padding-left:7px;margin:0 0 8px}
+.dqrow span{display:block;font-size:var(--fs-xs);color:var(--mut);margin-top:1px}
+.dqinline{font-size:var(--fs-xs);line-height:1.4;color:var(--bad);border-left:2px solid var(--bad);padding-left:7px;margin:0 0 8px}
 #stpage{max-width:900px;margin:0 auto;padding:20px 14px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
 #stpage h1{font:700 16px/1.3 system-ui;margin:0 0 4px}
 #stpage .sub{font:11px/1.4 system-ui;color:var(--mut);margin-bottom:14px}
@@ -131,23 +167,83 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <div id="dq"></div>
 <h2 class="sl">Today <span class="q" id="src">…</span></h2><div class="grid status" id="status"></div>
 <h2 class="sl">This week — following the plan <span class="q">The lamps</span></h2>
-<div class="card" data-desc="This week's key sessions — matched by content, lit when done."><div id="wtype" style="margin-bottom:9px;font-size:10px;color:var(--mut)"></div><div class="lamps" id="lamps"></div><div id="z2wk" style="margin-top:11px"></div><div class="rules" id="rules"></div></div>
+<div id="wkslot"><div id="wtype" style="margin-bottom:9px;font-size:var(--fs-xs);color:var(--mut)"></div><div class="lamps" id="lamps"></div><div id="z2wk" style="margin-top:11px"></div><div class="rules" id="rules"></div></div>
 <h2 class="sl">Body — recovery <span class="q">Behind the morning signal</span></h2><div class="grid three" id="body"></div>
 <h2 class="sl">Lens 3 · Key sessions — direction <span class="q">Every logged session · noisy, read as direction — not a weekly snapshot</span></h2>
-<h3 style="font-size:12px;color:var(--acc);margin:4px 0 8px">Engine — threshold &amp; race-sim</h3><div class="grid three" id="lens3eng"></div>
-<h3 style="font-size:12px;color:var(--acc2);margin:18px 0 8px">Chassis — strength &amp; stations</h3><div class="grid three" id="chassis"></div>
+<h3 style="font-size:var(--fs-sm);color:var(--acc);margin:4px 0 8px">Engine — threshold &amp; race-sim</h3><div class="grid three" id="lens3eng"></div>
+<h3 style="font-size:var(--fs-sm);color:var(--acc2);margin:18px 0 8px">Chassis — strength &amp; stations</h3><div class="grid three" id="chassis"></div>
 <h2 class="sl">Base &amp; engine volume <span class="q">Monitoring — not a lens, just the work</span></h2><div class="grid three" id="engine"></div>
 <h2 class="sl">Lens 2 · Calibrated max tests — the trend <span class="q">Low-noise · trust this for progress</span></h2><div id="tests"></div>
 <h2 class="sl">Lens 1 · Lab baseline — the foundation <span class="q">Sets the zones · next lab Jan 2027</span></h2><div class="grid two" id="labrow"></div>
-<h2 class="sl">Field position <span class="q">Pro Men 45–49 · measured</span></h2><div class="card" id="bench" data-desc="Your race splits against the real Pro Men 45-49 field from the Hyrox Result API. Bar = p25-p75 of the field, grey tick = field median, green tick = the athletes who actually went sub 1:10. Training never fills this card - real races only."></div>
-<h2 class="sl">The plan — phase roadmap <span class="q">Where on the road</span></h2><div class="card" data-desc="The rolling plan — build/deload weeks, tests, taper and races."><div class="road" id="road"></div></div>
+<h2 class="sl">Field position <span class="q">Pro Men 45–49 · measured</span></h2><div id="benchslot"></div>
+<h2 class="sl">The plan — phase roadmap <span class="q">Where on the road</span></h2><div id="roadslot"><div class="road" id="road"></div></div>
 <div class="quote" id="quote"></div>
 <div class="foot" id="foot"></div></div><div id="tt"></div>
 <script>
-var BUILD="3.23 · 2026-08-28 · logotyperna ar sparade inline-SVG i stallet for PNG-base64 — noll base64 i DOM:en, index.html 22 % lattare, och inget nytt att ladda upp: en extern asset hade krävt att ghpush.py larde sig en fillista";
+var BUILD="3.24 · 2026-08-28 · omdesign: en kortfabrik med rubrik + chip + skal for tomma varden, namngiven typskala (ingen text under 12 px), matt kontrast, atta renderade bredder utan mask, och tangentbordsvag till allt musen nar";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
+
+// ═══ EN KORTFABRIK ═════════════════════════════════════════════════════════
+// VARJE kort i dashboarden gar genom card(). Anatomin ar Mattias egen —
+// RUBRIK + CHIP + STRUKTURERAT INNEHALL — och fabriken satter dessutom
+// markoren `data-cf`, tangentbordsvagen och beskrivningens koppling, sa att
+// ett nytt kort aldrig kan glomma dem. Tidigare fanns atta fabriker och tio
+// inline-strangar; en anatomi som bara galler dar nagon rakade folja den ar
+// ingen anatomi.
+//
+// CHIPPEN AR OBLIGATORISK och den ar inte dekor: den sager VAR siffran kommer
+// ifran (matt · plan · lab · race) eller vad den star mot (best yet, aim 130).
+// I ett system som halls ihop av att skilja matt fran planerat ar det halva
+// domen.
+//
+// TOMT VARDE BAR SITT SKAL. Ett kort som visar "—" utan att saga varfor ar en
+// tyst lucka; `na()` markerar tomheten maskinlast och `why` sager skalet.
+function esc_(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function txt_(v){return String(v==null?'':v).replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();}
+function na(label){return '<div class="na" data-empty="1">'+(label||'—')+'</div>';}
+function card(o){
+  o=o||{};
+  var tc=o.titleCls||'h3';
+  var head=(tc==='h3'?'<h3>'+(o.title||'')+'</h3>':'<div class="'+tc+'">'+(o.title||'')+'</div>');
+  var chip=o.chipRaw ? o.chipRaw
+    : (o.chip&&o.chip.txt!=null
+        ? '<span class="bdelta '+(o.chip.cls||'acc')+'" data-chip="1">'+o.chip.txt+'</span>'
+        : '<span class="bdelta meta" data-chip="1">'+(o.meta||'no source')+'</span>');
+  return '<div class="card'+(o.cls?' '+o.cls:'')+'" data-cf="1" tabindex="0" role="group"'
+    +(o.id?' id="'+o.id+'"':'')+(o.style?' style="'+o.style+'"':'')
+    +' aria-label="'+esc_(txt_(o.title))+'"'
+    +(o.desc?' data-desc="'+esc_(txt_(o.desc))+'"':'')
+    +'><div class="chd">'+head+chip+'</div>'
+    +(o.sub?'<div class="sub">'+o.sub+'</div>':'')
+    +(o.body||'')
+    +(o.why?'<div class="why" data-why="1">'+o.why+'</div>':'')
+    +'</div>';
+}
+// De tre kort som forr lag som ren markup i body gar nu ocksa genom fabriken.
+// Ett kort som star i HTML foljer ingen anatomi — det foljer det nagon skrev.
+// Korrs direkt: skriptet ligger efter body, sa elementen finns redan, och
+// innehallet fylls forst nar data kommit.
+(function hydrateSlots(){
+  function fill(id, o){
+    var el=document.getElementById(id); if(!el) return;
+    // Slotens eget innehall ar kortets kropp — UTOM nar anroparen redan gett en.
+    // Forsta versionen klobbrade den, #bench forsvann ur DOM:en och benchCard()
+    // stoppade hela renderingen efter labrow. 11 kort i stallet for 32.
+    if(o.body==null) o.body=el.innerHTML;
+    el.outerHTML=card(o);
+  }
+  fill('wkslot', {cls:'span', title:'This week', titleCls:'k',
+    meta:'logged sessions', desc:"This week's key sessions — matched by content, lit when done."});
+  fill('benchslot', {title:'Field position', id:'benchcard', meta:'measured races',
+    body:'<div id="bench"></div>',
+    desc:'Your race splits against the real Pro Men 45-49 field from the Hyrox Result API. '
+       + 'Bar = p25-p75 of the field, grey tick = field median, green tick = the athletes who '
+       + 'actually went sub 1:10. Training never fills this card - real races only.'});
+  fill('roadslot', {title:'Phase roadmap', meta:'plan',
+    desc:'The rolling plan — build/deload weeks, tests, taper and races.'});
+})();
 function num(v){if(v==null||v==='')return null;return typeof v==='number'?v:parseFloat(String(v).replace(',','.'));}
 function pd(s){return new Date(s+'T00:00:00');}
 function fmtN(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' ');}
@@ -248,7 +344,9 @@ function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'
 function phaseAt(ds){var ph=((cfg||CONFIG||{}).phases)||[];return ph.find(function(x){return ds>=x[0]&&ds<=x[1];})||null;}
 function wkIsDL(k){var d=isoMon(k);if(!d)return false;var p=phaseAt(ymd(d));return !!(p&&/Deload|Taper/.test(p[3]));}
 
-function spark(series,lower,cls,desc){series=(series||[]).map(function(o){return (o&&typeof o==='object')?o:{v:o,d:String(o),t:''};}).filter(function(o){return o.v!=null;});if(series.length<2)return '<span class="na">—</span>';var vals=series.map(function(o){return o.v;});var mn=Math.min.apply(0,vals),mx=Math.max.apply(0,vals),rng=(mx-mn)||1,h=cls==='bigspark'?56:26;var xy=series.map(function(o,i){return {x:i/(series.length-1)*100,y:(h-3)-((o.v-mn)/rng)*(h-6),o:o};});var poly=xy.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var imp=vals[vals.length-1]>vals[0];if(lower)imp=!imp;var c=imp?'var(--good)':'var(--warn)';var band=100/(series.length-1);var dots=xy.map(function(p){return '<rect x="'+(p.x-0.5).toFixed(1)+'" y="'+(p.y-2).toFixed(1)+'" width="1" height="4" fill="'+c+'"></rect>';}).join('');var hit=xy.map(function(p){return '<rect class="pt" x="'+Math.max(0,p.x-band/2).toFixed(1)+'" y="0" width="'+band.toFixed(1)+'" height="'+h+'" fill="transparent" data-d="'+String(p.o.d).replace(/"/g,'')+'" data-t="'+(p.o.t||'')+'" data-desc="'+(desc||'').replace(/"/g,'')+'"></rect>';}).join('');return '<svg class="'+(cls||'spark')+'" viewBox="0 0 100 '+h+'" preserveAspectRatio="none"><polyline points="'+poly+'" fill="none" stroke="'+c+'" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>'+dots+hit+'</svg>';}
+function spark(series,lower,cls,desc){series=(series||[]).map(function(o){return (o&&typeof o==='object')?o:{v:o,d:String(o),t:''};}).filter(function(o){return o.v!=null;});if(series.length<2)return '<span class="na">—</span>';var vals=series.map(function(o){return o.v;});var mn=Math.min.apply(0,vals),mx=Math.max.apply(0,vals),rng=(mx-mn)||1,h=cls==='bigspark'?56:26;var xy=series.map(function(o,i){return {x:i/(series.length-1)*100,y:(h-3)-((o.v-mn)/rng)*(h-6),o:o};});var poly=xy.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var imp=vals[vals.length-1]>vals[0];if(lower)imp=!imp;var c=imp?'var(--good)':'var(--warn)';var band=100/(series.length-1);var dots=xy.map(function(p){return '<rect x="'+(p.x-0.5).toFixed(1)+'" y="'+(p.y-2).toFixed(1)+'" width="1" height="4" fill="'+c+'"></rect>';}).join('');var hit=xy.map(function(p){return '<rect class="pt" x="'+Math.max(0,p.x-band/2).toFixed(1)+'" y="0" width="'+band.toFixed(1)+'" height="'+h+'" fill="transparent" data-d="'+String(p.o.d).replace(/"/g,'')+'" data-t="'+(p.o.t||'')+'"></rect>';}).join('');return '<svg class="'+(cls||'spark')+'" role="img" aria-label="'+String(desc||'Trend')
+      .replace(/"/g,'')+' — '+series.length+' points, '+String(series[0].d).replace(/"/g,'')
+      +' to '+String(series[series.length-1].d).replace(/"/g,'')+'" viewBox="0 0 100 '+h+'" preserveAspectRatio="none"><polyline points="'+poly+'" fill="none" stroke="'+c+'" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>'+dots+hit+'</svg>';}
 function arrow(vals,lower){vals=(vals||[]).map(function(o){return o&&typeof o==='object'?o.v:o;}).filter(function(v){return v!=null;});if(vals.length<2)return '';var imp=vals[vals.length-1]>vals[0];if(lower)imp=!imp;return '<span class="tr" style="color:'+(imp?'var(--good)':'var(--warn)')+'">'+(imp?'▲':'▼')+'</span>';}
 
 var CONFIG = {"races": [["2026-12-11", "Stockholm"], ["2027-03-25", "Copenhagen"], ["2027-04-16", "Helsinki"]], "phases": [["2026-07-13", "2026-07-19", "W29", "Deload"], ["2026-07-20", "2026-08-09", "W30-32", "Build"], ["2026-08-10", "2026-08-16", "W33", "Deload"], ["2026-08-17", "2026-09-06", "W34-36", "Build"], ["2026-09-07", "2026-09-13", "W37", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-09-14", "2026-10-04", "W38-40", "Build"], ["2026-10-05", "2026-10-11", "W41", "Deload+test", "FTP Bike (Tue) + 5K Run (Thu) · quarterly"], ["2026-10-12", "2026-11-01", "W42-44", "Build"], ["2026-11-02", "2026-11-08", "W45", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-11-09", "2026-11-29", "W46-48", "Build"], ["2026-11-30", "2026-12-11", "W49-50", "Taper"]], "goals": {"dl": 130, "fs": 80, "pr": 25, "bl": 25, "bg": 22.5, "cad": 170, "wb": 100, "wb_pr": 62, "volume": 55}, "threshold_modalities": ["Run", "Ski"], "bands": {"Ski": null, "Run": null}, "threshold_plan": [["2026-08-17", "2026-09-06", ["Ski"]], ["2026-09-14", "2026-09-20", ["Run"]], ["2026-09-21", "2026-09-27", ["Ski"]], ["2026-09-28", "2026-10-04", ["Run"]], ["2026-10-12", "2026-11-01", ["Run"]], ["2026-11-09", "2026-11-29", ["Run"]]], "rhr_base": 40}; // plan data only — no health data in the public file
@@ -421,13 +519,14 @@ function dqRender(){
   var el=document.getElementById('dq'); if(!el) return;
   if(!DQ.length){ el.innerHTML=''; return; }
   var nErr=DQ.filter(function(x){return x.sev==='err';}).length;
-  el.innerHTML='<div class="card dqcard'+(nErr?'':' warn')+'">'
-    +'<div class="k">Data integrity <span class="chip">'+(nErr?nErr+' error'+(nErr>1?'s':''):DQ.length+' warning'+(DQ.length>1?'s':''))+'</span></div>'
-    +'<div class="dqlist">'+DQ.slice(0,8).map(function(x){
+  el.innerHTML=card({cls:'dqcard'+(nErr?'':' warn'), title:'Data integrity', titleCls:'k',
+    chip:{cls:(nErr?'bad':'warn'), txt:(nErr?nErr+' error'+(nErr>1?'s':''):DQ.length+' warning'+(DQ.length>1?'s':''))},
+    desc:'Contract drift between the sheet and the code — the dashboard renders what is logged, so a gap here is a gap in the data, not in the view.',
+    body:'<div class="dqlist">'+DQ.slice(0,8).map(function(x){
         return '<div class="dqrow"><b>'+x.tab+'</b> — '+x.what+'<span>'+x.fix+'</span></div>';
       }).join('')
     +(DQ.length>8?'<div class="dqrow" style="opacity:.6">+ '+(DQ.length-8)+' till — kör <b style="color:inherit">?selftest=1</b> för hela listan</div>':'')
-    +'</div></div>';
+    +'</div>'});
 }
 function dqFor(tab){ return DQ.filter(function(x){return x.tab===tab;}); }
 function dqNote(tab){
@@ -488,7 +587,7 @@ var _pi=ph?cfg.phases.indexOf(ph):-1, phNext=_pi>=0?cfg.phases[_pi+1]:null;
 var dLeft=ph?Math.max(0,Math.round((pd(ph[1])-now)/DAY)):null;
 var phSub=ph?(dLeft===0?('Last day'+(phNext?' — '+phNext[3]+' ('+phNext[2]+') starts tomorrow':'')):(dLeft+'d left'+(phNext?' → '+phNext[3]+' '+phNext[2]:''))):'';
 // Card 2 · Morning signal — one verdict + the three sub-signals.
-function sigChip(lbl,st,txt){var c=st==='green'?'var(--good)':st==='yellow'?'var(--warn)':st==='red'?'var(--bad)':st==='ok'?'var(--acc)':'var(--mut)';return '<span class="sig"><span class="sd" style="background:'+c+'"></span>'+lbl+' '+txt+'</span>';}
+function sigChip(lbl,st,txt){var c=st==='green'?'var(--good)':st==='yellow'?'var(--warn)':st==='red'?'var(--bad)':st==='ok'?'var(--acc)':'var(--mut)';return '<span class="sig" data-chip="1"><span class="sd" style="background:'+c+'"></span>'+lbl+' '+txt+'</span>';}
 var sigTopChip='<span class="pill '+sigAll+'" style="margin-left:0">'+sigAll+'</span>';
 var sigMain='<span style="color:'+(yels>=2?'var(--warn)':'var(--ink)')+'">'+(yels>=2?'Reduce intensity today':'Train as planned')+'</span>';
 var sigSub=sigChip('RHR',rhrSt,rhrNow==null?'—':rhrNow)+sigChip('Sleep',sqSt,sqNow==null?'—':sqNow)+sigChip('Mood',moSt,moNow==null?'—':(moSt==='green'?'✓':moNow));
@@ -512,17 +611,19 @@ document.getElementById('status').innerHTML=[
 ['Phase',phChip,phMain,phSub2,'Current week in the load cycle — and what starts next.',''],
 ['This week',wkChip,wkMain,wkSub,'What this week asks of you — content follows the phase (build / deload / test / taper).',''],
 ['Next test',ntChip,ntMain,ntSub,'Lens 2 — calibrated max tests on deload weeks are the low-noise trend to trust.','ntest']
-].map(function(s){return '<div class="card '+s[5]+'" data-desc="'+s[4]+'"><div class="k"><span>'+s[0]+'</span>'+(s[1]||'')+'</div><div class="v">'+s[2]+'</div>'+(s[3]?'<div class="sub2">'+s[3]+'</div>':'')+'</div>';}).join('');
+].map(function(s){return card({cls:s[5], title:'<span>'+s[0]+'</span>', titleCls:'k',
+  chipRaw:(s[1]||null), meta:'from the logbook', desc:s[4],
+  body:'<div class="v">'+s[2]+'</div>'+(s[3]?'<div class="sub2">'+s[3]+'</div>':'')});}).join('');
 var _src=document.getElementById('src');
 if(_src){_src.innerHTML='Where am I today';} // boot() körs bara efter LIVE=true; offline går till _offline()
 document.getElementById('wtype').textContent='Week type: '+(ph?(/test/.test(ph[3])?'Deload + tests — no threshold, no heavy stations':/Deload/.test(ph[3])?'Deload — no key sessions, recovery only':/Taper/.test(ph[3])?'Taper — short race-pace touches only':'Build — 5 key sessions')+'':'—')+'. Matched by content, not by day.';
-document.getElementById('lamps').innerHTML=(ph&&/Deload|Taper/.test(ph[3]))?'<span style="font-size:11px;color:var(--mut)">No key sessions this week — the five lamps return in build.</span>':Object.keys(done).map(function(k){var j=(k===JOKER);return '<div class="lamp"><div class="lc '+(done[k]?'on':'')+'"'+(done[k]&&j?' style="background:var(--acc2);border-color:var(--acc2)"':'')+'>'+(done[k]?'✓':(j?'◇':'○'))+'</div>'+k+(j?' <span style="opacity:.6">optional</span>':'')+'</div>';}).join('');
+document.getElementById('lamps').innerHTML=(ph&&/Deload|Taper/.test(ph[3]))?'<span style="font-size:var(--fs-xs);color:var(--mut)">No key sessions this week — the five lamps return in build.</span>':Object.keys(done).map(function(k){var j=(k===JOKER);return '<div class="lamp"><div class="lc '+(done[k]?'on':'')+'"'+(done[k]&&j?' style="background:var(--acc2);border-color:var(--acc2)"':'')+'>'+(done[k]?'✓':(j?'◇':'○'))+'</div>'+k+(j?' <span style="opacity:.6">optional</span>':'')+'</div>';}).join('');
 // Z2-basen raknade VARJE BikeErg-pass oavsett zon, och /Z/ matchade Z1-Z5 pa
 // loprundorna — ett Z4-pass tickade alltsa Z2-basen. Samma filter som
 // Low-intensity volume (isLowZone), sa de tva korten inte kan saga olika saker.
 var z2c=D.bike.filter(function(b){return b.date&&iso(pd(b.date))===wk&&isLowZone(b.zone);}).length+D.run.filter(function(r){return r.date&&iso(pd(r.date))===wk&&isLowZone(r.zone);}).length;
 var z2t=6,dots='';for(var zi=0;zi<z2t;zi++){dots+='<span class="dot" style="width:12px;height:12px;margin-right:4px;background:'+(zi<z2c?'var(--good)':'var(--pan2)')+'"></span>';}
-document.getElementById('z2wk').innerHTML='<span style="font-size:9px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em">Z2 base (mornings + long)</span> &nbsp; <b style="font-size:13px">'+Math.min(z2c,z2t)+' / '+z2t+'</b> &nbsp; '+dots;
+document.getElementById('z2wk').innerHTML='<span style="font-size:var(--fs-xs);color:var(--mut);text-transform:uppercase;letter-spacing:.05em">Z2 base (mornings + long)</span> &nbsp; <b style="font-size:var(--fs-sm)">'+Math.min(z2c,z2t)+' / '+z2t+'</b> &nbsp; '+dots;
 var vol={}; byd(D.run).forEach(function(r){var k=iso(pd(r.date));vol[k]=(vol[k]||0)+(num(r.dist)||0);});byd(D.vo2||[]).forEach(function(r){if(r.date){var k=iso(pd(r.date));vol[k]=(vol[k]||0)+(num(r.dist)||0);}});byd(D.thr).filter(function(t){return t.type==='Run'&&t.date;}).forEach(function(t){var k=iso(pd(t.date));vol[k]=(vol[k]||0)+thrKm(t);});
 var _cw=iso(now);var vk=Object.keys(vol).sort(), vkComp=vk.filter(function(k){return k<_cw;}), thisV=vkComp.length?vol[vkComp[vkComp.length-1]]:0, prevV=vkComp.length>1?vol[vkComp[vkComp.length-2]]:0, volPct=prevV?Math.round((thisV/prevV-1)*100):0;
 var greenDays=rec.slice(-7).filter(function(r){return num(r.rhr)!=null&&num(r.rhr)<rhrBase+5;}).length;
@@ -548,7 +649,11 @@ var ronT=byd(D.ron).map(function(r){var s=['v1','v2','v3','v4'].reduce(function(
 var cadS=byd(byd(D.run).filter(function(r){return num(r.cad)!=null;}).map(function(r){return {date:r.date,cad:num(r.cad),src:'run'};})
   .concat(byd(D.thr).filter(function(t){return t.type==='Run'&&num(t.cad)!=null;}).map(function(t){return {date:t.date,cad:num(t.cad),src:'threshold'};})))
   .map(function(r){return P(r.cad,r.cad+' spm ('+r.src+')',r.date);});
-function bspark(series,ref,cls){series=(series||[]).filter(function(o){return o&&o.v!=null;});if(series.length<2)return '<span class="na">trend after 2 logs</span>';var vals=series.map(function(o){return o.v;});var mn=Math.min.apply(0,vals),mx=Math.max.apply(0,vals);if(ref!=null){mn=Math.min(mn,ref);mx=Math.max(mx,ref);}var rng=(mx-mn)||1,h=46,pad=5;function Y(v){return (h-pad)-((v-mn)/rng)*(h-2*pad);}var xy=series.map(function(o,i){return {x:i/(series.length-1)*100,y:Y(o.v),o:o};});var poly=xy.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var band=100/(series.length-1);var dots=xy.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="1.7" fill="var(--acc)"></circle>';}).join('');var rl=ref!=null?'<line x1="0" y1="'+Y(ref).toFixed(1)+'" x2="100" y2="'+Y(ref).toFixed(1)+'" stroke="var(--mut)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" opacity="0.55"></line>':'';var hit=xy.map(function(p){return '<rect class="pt" x="'+Math.max(0,p.x-band/2).toFixed(1)+'" y="0" width="'+band.toFixed(1)+'" height="'+h+'" fill="transparent" data-d="'+String(p.o.d).replace(/"/g,'')+'" data-t="'+(p.o.t||'')+'"></rect>';}).join('');return '<svg class="'+(cls||'bspark')+'" viewBox="0 0 100 '+h+'" preserveAspectRatio="none">'+rl+'<polyline points="'+poly+'" fill="none" stroke="var(--acc)" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>'+dots+hit+'</svg>';}function vo2card(v){var mk=v?Math.max(3,Math.min(97,Math.round((v-30)/55*100))):null;var cl=v==null?'':(v>=75?'World-class · top <1%':v>=60?'Elite endurance · top ~1%':v>=52?'Superior · ~95th':v>=45?'Good · ~75th':v>=38?'Above average':'Average');return '<div class="card tile" data-desc="VO₂max vs age-group norms (Cooper/ACSM, men 45–49)."><div class="lb">Lens 1 · Lab baseline</div><div class="row"><div class="val">VO₂max '+(v||'—')+'</div><span style="font-size:10px;color:var(--mut)">Next lab Jan 2027</span></div>'+(v?'<div style="position:relative;margin-top:12px;height:9px;border-radius:5px;background:linear-gradient(90deg,#1d2531,#1e3a8a 45%,#2563eb 72%,#93c5fd)"><div style="position:absolute;top:-4px;left:'+mk+'%;width:3px;height:17px;background:#fff;border-radius:2px;transform:translateX(-50%);box-shadow:0 0 0 2px var(--pan)"></div></div><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--mut);margin-top:5px"><span>avg 38</span><span>excellent 52</span><span>elite 60</span><span>WC 80</span></div><div style="font-size:11px;font-weight:800;color:var(--acc);margin-top:7px">'+cl+' · men 45–49</div><div style="font-size:9px;color:var(--mut);margin-top:2px">Motor ceiling already elite — the limiter is pace under fatigue</div>':'')+'</div>';}function parseSplit(s){if(!s)return null;s=String(s);var z=[0,0,0,0,0,0],f=false,re=/Z\s*(\d)[^\d]*(\d+):(\d{2})/g,m;while(m=re.exec(s)){var zi=+m[1];if(zi>=1){z[Math.min(zi,5)]+=(+m[2])+(+m[3])/60;f=true;}}return f?z:null;}
+function bspark(series,ref,cls){series=(series||[]).filter(function(o){return o&&o.v!=null;});if(series.length<2)return '<span class="na">trend after 2 logs</span>';var vals=series.map(function(o){return o.v;});var mn=Math.min.apply(0,vals),mx=Math.max.apply(0,vals);if(ref!=null){mn=Math.min(mn,ref);mx=Math.max(mx,ref);}var rng=(mx-mn)||1,h=46,pad=5;function Y(v){return (h-pad)-((v-mn)/rng)*(h-2*pad);}var xy=series.map(function(o,i){return {x:i/(series.length-1)*100,y:Y(o.v),o:o};});var poly=xy.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var band=100/(series.length-1);var dots=xy.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="1.7" fill="var(--acc)"></circle>';}).join('');var rl=ref!=null?'<line x1="0" y1="'+Y(ref).toFixed(1)+'" x2="100" y2="'+Y(ref).toFixed(1)+'" stroke="var(--mut)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" opacity="0.55"></line>':'';var hit=xy.map(function(p){return '<rect class="pt" x="'+Math.max(0,p.x-band/2).toFixed(1)+'" y="0" width="'+band.toFixed(1)+'" height="'+h+'" fill="transparent" data-d="'+String(p.o.d).replace(/"/g,'')+'" data-t="'+(p.o.t||'')+'"></rect>';}).join('');return '<svg class="'+(cls||'bspark')+'" role="img" aria-label="Trend, '+series.length
+      +' points: '+series.map(function(o){return String(o.v);}).join(', ')+'" viewBox="0 0 100 '+h+'" preserveAspectRatio="none">'+rl+'<polyline points="'+poly+'" fill="none" stroke="var(--acc)" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>'+dots+hit+'</svg>';}function vo2card(v){var mk=v?Math.max(3,Math.min(97,Math.round((v-30)/55*100))):null;var cl=v==null?'':(v>=75?'World-class · top <1%':v>=60?'Elite endurance · top ~1%':v>=52?'Superior · ~95th':v>=45?'Good · ~75th':v>=38?'Above average':'Average');return card({cls:'tile', title:'Lens 1 · Lab baseline', titleCls:'lb',
+  meta:'lab Jan 2026', desc:'VO₂max vs age-group norms (Cooper/ACSM, men 45–49).',
+  why:(v==null?'No lab value logged yet — the next test is Jan 2027.':''),
+  body:'<div class="row"><div class="val">VO₂max '+(v||'<span data-empty="1">—</span>')+'</div><span style="font-size:var(--fs-xs);color:var(--mut)">Next lab Jan 2027</span></div>'+(v?'<div style="position:relative;margin-top:12px;height:9px;border-radius:5px;background:linear-gradient(90deg,#1d2531,#1e3a8a 45%,#2563eb 72%,#93c5fd)"><div style="position:absolute;top:-4px;left:'+mk+'%;width:3px;height:17px;background:#fff;border-radius:2px;transform:translateX(-50%);box-shadow:0 0 0 2px var(--pan)"></div></div><div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--mut);margin-top:5px"><span>avg 38</span><span>excellent 52</span><span>elite 60</span><span>WC 80</span></div><div style="font-size:var(--fs-xs);font-weight:800;color:var(--acc);margin-top:7px">'+cl+' · men 45–49</div><div style="font-size:var(--fs-xs);color:var(--mut);margin-top:2px">Motor ceiling already elite — the limiter is pace under fatigue</div>':'')});}function parseSplit(s){if(!s)return null;s=String(s);var z=[0,0,0,0,0,0],f=false,re=/Z\s*(\d)[^\d]*(\d+):(\d{2})/g,m;while(m=re.exec(s)){var zi=+m[1];if(zi>=1){z[Math.min(zi,5)]+=(+m[2])+(+m[3])/60;f=true;}}return f?z:null;}
 function zoneMins(cut){
   // EN REGEL (build 3.7): ett pass raknas i motorn bara om det har en zonsplit.
   // Inga fallbacks langre — inte snittpuls pa lop/BikeErg, inte prescription-Z4 pa
@@ -565,11 +670,20 @@ function zoneMins(cut){
   return z;
 }
 function zoneWidget(z){var tot=z.reduce(function(a,b){return a+b;},0)||1;var Z=[null,{n:'Z1',p:'Recovery / rehab',c:'var(--mut)'},{n:'Z2',p:'Aerobic durability',c:'var(--good)'},{n:'Z3',p:'HYROX steady',c:'var(--acc)'},{n:'Z4',p:'Threshold',c:'var(--warn)'},{n:'Z5',p:'High stress → VO2max',c:'var(--bad)'}];var out='';for(var i=1;i<=5;i++){var pct=Math.round(z[i]/tot*100);out+='<div class="zrow"><span class="zn" style="color:'+Z[i].c+'">'+Z[i].n+'</span><span class="zp">'+Z[i].p+'</span><div class="zt"><span style="width:'+pct+'%;background:'+Z[i].c+'"></span></div><span class="zv">'+pct+'%<small> · '+(z[i]/60).toFixed(1)+'h</small></span></div>';}return out;}
-function bestOf(series,lower){var vs=(series||[]).map(function(o){return o.v;}).filter(function(v){return v!=null;});if(!vs.length)return null;return lower?Math.min.apply(0,vs):Math.max.apply(0,vs);}function chipBest(series,lower){var vs=(series||[]).map(function(o){return o.v;}).filter(function(v){return v!=null;});if(vs.length<2)return null;var cur=vs[vs.length-1],best=lower?Math.min.apply(0,vs):Math.max.apply(0,vs);if(cur===best)return {cls:'good',txt:'best yet'};var d=Math.abs(cur-best);return {cls:'acc',txt:(lower?'+':'−')+(d<10?d.toFixed(1):Math.round(d))+' vs best'};}function chipGoal(cur,goal,up){if(cur==null)return null;var ok=up?cur>=goal:cur<=goal;return ok?{cls:'good',txt:'≥ '+goal+' ✓'}:{cls:'acc',txt:'aim '+goal};}function tile2(lb,val,chip,series,target,lower,body,desc,sub){return '<div class="card tile" data-desc="'+String(desc||'').replace(/"/g,'')+'"><div class="thd"><div class="lb">'+lb+'</div>'+(chip?'<span class="bdelta '+chip.cls+'">'+chip.txt+'</span>':'')+'</div><div class="val">'+val+'</div>'+(sub?'<div class="tsub">'+sub+'</div>':'')+(body||bspark(series,target))+'</div>';}function tile(lb,val,series,lower,body,desc){return '<div class="card tile" data-desc="'+String(desc||'').replace(/"/g,'')+'"><div class="lb">'+lb+'</div><div class="row"><div class="val">'+val+'</div>'+(series?arrow(series,lower):'')+'</div>'+(body||spark(series,lower,'spark',desc))+'</div>';}
+function bestOf(series,lower){var vs=(series||[]).map(function(o){return o.v;}).filter(function(v){return v!=null;});if(!vs.length)return null;return lower?Math.min.apply(0,vs):Math.max.apply(0,vs);}function chipBest(series,lower){var vs=(series||[]).map(function(o){return o.v;}).filter(function(v){return v!=null;});if(vs.length<2)return null;var cur=vs[vs.length-1],best=lower?Math.min.apply(0,vs):Math.max.apply(0,vs);if(cur===best)return {cls:'good',txt:'best yet'};var d=Math.abs(cur-best);return {cls:'acc',txt:(lower?'+':'−')+(d<10?d.toFixed(1):Math.round(d))+' vs best'};}function chipGoal(cur,goal,up){if(cur==null)return null;var ok=up?cur>=goal:cur<=goal;return ok?{cls:'good',txt:'≥ '+goal+' ✓'}:{cls:'acc',txt:'aim '+goal};}function tile2(lb,val,chip,series,target,lower,body,desc,sub,meta,why){return card({cls:'tile',
+  title:lb, titleCls:'lb', chip:chip, meta:meta||'from the logbook', desc:desc, why:why,
+  body:'<div class="val">'+val+'</div>'+(sub?'<div class="tsub">'+sub+'</div>':'')+(body||bspark(series,target))});}function tile(lb,val,series,lower,body,desc,meta,why){return card({cls:'tile',
+  title:lb, titleCls:'lb', meta:meta||((series&&series.length?series.length+' logs':'from the logbook')),
+  desc:desc, why:why,
+  body:'<div class="row"><div class="val">'+val+'</div>'+(series?arrow(series,lower):'')+'</div>'+(body||spark(series,lower,'spark',desc))});}
 var slifts=['dl','fs','pr','bl','bg'];var pcts=[];
 slifts.forEach(function(f){var s=byd(D.str).filter(function(r){return deriveWave(r.date)==='w1'&&num(r[f])!=null;}).map(function(r){return num(r[f]);});if(s.length>=2)pcts.push((s[s.length-1]/s[s.length-2]-1)*100);});
 var avg=pcts.length?pcts.reduce(function(a,b){return a+b;},0)/pcts.length:null;
-var strTile='<div class="card tile" data-desc="Average strength increase across the 5 main lifts, w1-over-w1."><div class="lb">Strength · avg</div><div class="row"><div class="val">'+(avg!=null?((avg>=0?'+':'')+avg.toFixed(1)+'%'):'—')+'</div>'+(avg!=null?'<span class="tr" style="color:'+(avg>=0?'var(--good)':'var(--warn)')+'">'+(avg>=0?'▲':'▼')+'</span>':'')+'</div><div style="font-size:9px;margin-top:3px;color:var(--mut)">'+(avg!=null?('Avg of '+pcts.length+' lifts · vs last cycle'):'Baseline — awaiting next cycle w1')+'</div></div>';
+var strTile=card({cls:'tile', title:'Strength · avg', titleCls:'lb',
+  meta:(avg!=null?pcts.length+' lifts':'w1 baseline'),
+  desc:'Average strength increase across the 5 main lifts, w1-over-w1.',
+  why:(avg==null?'Only one cycle logged — a w1-over-w1 change needs two.':''),
+  body:'<div class="row"><div class="val">'+(avg!=null?((avg>=0?'+':'')+avg.toFixed(1)+'%'):'<span data-empty="1">—</span>')+'</div>'+(avg!=null?'<span class="tr" style="color:'+(avg>=0?'var(--good)':'var(--warn)')+'">'+(avg>=0?'▲':'▼')+'</span>':'')+'</div><div style="font-size:var(--fs-xs);margin-top:3px;color:var(--mut)">'+(avg!=null?('Avg of '+pcts.length+' lifts · vs last cycle'):'Baseline — awaiting next cycle w1')+'</div>'});
 var abase={},bmin={};byd(D.run).forEach(function(r){if(r.date){var k=iso(pd(r.date));abase[k]=(abase[k]||0)+(num(r.time)||0);}});byd(D.bike).forEach(function(b){if(b.date){var k=iso(pd(b.date));abase[k]=(abase[k]||0)+(num(b.time)||0);bmin[k]=(bmin[k]||0)+(num(b.time)||0);}});var abk=Object.keys(abase).sort();var thisB=abase[abk[abk.length-1]]||0,prevB=abase[abk[abk.length-2]]||0,basePct=prevB?Math.round((thisB/prevB-1)*100):0,thisBike=bmin[abk[abk.length-1]]||0;var baseSeries=abk.map(function(k){return P(+(abase[k]/60).toFixed(2),(abase[k]/60).toFixed(1)+' h',k);});function _lw1(f){var a=v1vals(D.str,f);return a.length?a[a.length-1]:null;}var _dl=_lw1('dl'),_pr=_lw1('pr'),_bl=_lw1('bl');var _sp=[];if(_dl)_sp.push(Math.min(1,_dl/cfg.goals.dl));if(_pr)_sp.push(Math.min(1,_pr/cfg.goals.pr));if(_bl)_sp.push(Math.min(1,_bl/cfg.goals.bl));var strPct=_sp.length?Math.round(_sp.reduce(function(a,b){return a+b;},0)/_sp.length*100):null;var sledS=byd(D.hyrox).filter(function(h){return num(h.push)!=null;}).map(function(h){return P(num(h.push),num(h.push)+' kg',h.date);});var sledCur=sledS.length?sledS[sledS.length-1].v:null;var tRunC=byd(D.thr).filter(function(t){return t.type==='Run'&&psec(t.pace)!=null;}).map(function(t){return P(psec(t.pace),mmss(psec(t.pace))+' /km',t.date);});
 // wave v1-over-v1
 function v1vals(rows,f){return byd(rows).filter(function(r){return deriveWave(r.date)==='w1'&&num(r[f])!=null;}).map(function(r){return num(r[f]);});}
@@ -590,7 +704,7 @@ function waveLine(label,rows,f,goal,cap,repF){var s=v1vals(rows,f);var note;
  var _all=byd(rows).filter(function(r){return num(r[f])!=null;});
  var _last=_all.length?_all[_all.length-1]:null;
  var cur=_last?num(_last[f]):null;
- var repTxt='';if(repF&&_last&&_last[repF]!=null&&_last[repF]!=='')repTxt=' <span style="font-size:11px;color:var(--mut);font-weight:600">@ '+_last[repF]+' reps</span>';
+ var repTxt='';if(repF&&_last&&_last[repF]!=null&&_last[repF]!=='')repTxt=' <span style="font-size:var(--fs-xs);color:var(--mut);font-weight:600">@ '+_last[repF]+' reps</span>';
  var _pv=_last?prevSameWave(_all,_all.length-1):null;
  var _w=_last?deriveWave(_last.date):null;
  var _pct=null;
@@ -612,14 +726,21 @@ function waveLine(label,rows,f,goal,cap,repF){var s=v1vals(rows,f);var note;
  var gchip=gap==null?(goal?'':'<span class="bdelta">own trend</span>'):(gap>0?'<span class="bdelta acc">→ '+(gap%1?gap.toFixed(1):gap)+' kg to '+goal+'</span>':(repGoal&&repsAt>=repGoal?'<span class="bdelta good">'+goal+' kg × '+repGoal+' ✓</span>':'<span class="bdelta acc">'+goal+' kg ✓ · reps '+repsAt+'/'+(repGoal||'?')+'</span>'));return '<div class="prog"><div class="pctl" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>'+label+(cap?' <span style="opacity:.6">'+cap+'</span>':'')+'</span>'+gchip+'</div><div class="t"><span>'+(cur!=null?cur+' kg':'—')+repTxt+(_last?' <span class="wtag">'+deriveWave(_last.date)+' · '+wdate(_last.date)+'</span>':'')+'</span><span>'+note+'</span></div>'+(goal?'<div class="trk"><span style="width:'+barpct+'%"></span></div>':'')+'</div>';}
 function cut(w){return w?new Date(now-w*DAY):null;}
 function fdate(a,c){return byd(a).filter(function(x){return !c||pd(x.date)>=c;});}
-function mpanel(cls,title,sub,val,chip,series,refLine,body,desc){if(val==='—'||val==null)val='<span style="color:var(--mut);font-weight:600">—</span>';return '<div class="card panel '+cls+'" data-desc="'+String(desc||sub).replace(/<[^>]+>/g,'').replace(/"/g,'')+'"><h3>'+title+'</h3><div class="sub">'+sub+'</div><div class="mrow"><div class="mval">'+val+'</div>'+(chip?'<span class="bdelta '+chip.cls+'">'+chip.txt+'</span>':'')+'</div>'+(body||bspark(series,refLine))+'</div>';}function panel(cls,title,sub,body){return '<div class="card panel '+cls+'" data-desc="'+String(sub).replace(/<[^>]+>/g,'').replace(/"/g,'')+'"><h3>'+title+'</h3><div class="sub">'+sub+'</div>'+body+'</div>';}
+function mpanel(cls,title,sub,val,chip,series,refLine,body,desc,meta,why){
+  var empty=(val==='—'||val==null);
+  if(empty)val='<span data-empty="1" style="color:var(--mut);font-weight:600">—</span>';
+  return card({cls:'panel '+cls, title:title, sub:sub, chip:chip,
+    meta:meta||((series&&series.length?series.length+' logs':'from the logbook')),
+    desc:desc||sub, why:(why||(empty?'No logged session carries this value yet.':'')),
+    body:'<div class="mrow"><div class="mval">'+val+'</div></div>'+(body||bspark(series,refLine))});}function panel(cls,title,sub,body,meta,why){return card({cls:'panel '+cls, title:title, sub:sub,
+  meta:meta||'from the logbook', desc:sub, body:body, why:why});}
 function bigspark(vals,lower,desc){var s=(vals||[]).map(function(o){return o&&typeof o==='object'?o:{v:o,d:String(o),t:''};}).filter(function(o){return o.v!=null;});return s.length<2?'<div class="na">Awaiting data</div>':spark(s,lower,'bigspark',desc);}
 function barsvg(series,desc,wip){if(!series.length&&!wip)return '<div class="na">Awaiting</div>';
  // wip = den PAGAENDE veckan. Ritas streckad och rors aldrig av vecka-mot-vecka-jamforelsen,
  // men syns direkt sa kortet inte ser dott ut mitt i veckan.
  var all=series.concat(wip?[wip]:[]);
  var mx=Math.max.apply(0,all.map(function(o){return o.v;}))||1;
- var bar=function(o,cls){return '<div class="pt'+(cls||'')+'" data-d="'+o.d+'" data-t="'+(o.t||'')+'" data-desc="'+(desc||'')+'" style="height:'+Math.max(2,o.v/mx*100).toFixed(0)+'%"></div>';};
+ var bar=function(o,cls){return '<div class="pt'+(cls||'')+'" data-d="'+o.d+'" data-t="'+(o.t||'')+'" style="height:'+Math.max(2,o.v/mx*100).toFixed(0)+'%"></div>';};
  return '<div class="bars">'+series.map(function(o){return bar(o,'');}).join('')+(wip?bar(wip,' wip'):'')
   +'</div><div class="axis"><span>'+String(all[0].t||'').slice(5)+'</span><span>'
   +String(all[all.length-1].t||'').slice(5)+(wip?' · pågår':'')+'</span></div>';}
@@ -885,12 +1006,12 @@ function stRow(name,f,pro,unit){var rows=byd(D.hyrox).filter(function(h){return 
  var lastR=rows.length?rows[rows.length-1]:null;var cur=srs.length?srs[srs.length-1].v:null;var d=cur!=null?+(cur-pro).toFixed(1):null;
  var chip=cur==null?'<span class="bdelta">awaiting first log</span>':(d>0?'<span class="bdelta good">+'+d+' over Pro</span>':(d===0?'<span class="bdelta acc">at start (Pro)</span>':'<span class="bdelta warn">'+d+' vs Pro</span>'));
  var bk=lastR?(num(lastR[f])+((vOn&&num(lastR.vest))?' + '+num(lastR.vest)+' vest':'')):'';
- var trend=srs.length>1?('<div style="font-size:10px;color:var(--mut);margin-top:2px">'+srs[0].v+' → '+cur+' '+unit+' since start · +'+((cur-srs[0].v)%1?(cur-srs[0].v).toFixed(1):(cur-srs[0].v))+' added</div>'):'';
- return '<div class="prog"><div class="pctl" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b style="color:var(--ink)">'+name+'</b> <span style="opacity:.6">· start Pro '+pro+' '+unit+'</span></span>'+chip+'</div><div class="t" style="margin-top:2px"><span style="font-size:14px;font-weight:800">'+(cur!=null?cur+' '+unit:'—')+'</span>'+((bk&&vOn&&num(lastR.vest))?'<span style="font-size:10px;color:var(--mut)">'+bk+'</span>':'')+'</div>'+trend+(srs.length>1?bspark(srs,pro):'')+'</div>';}
+ var trend=srs.length>1?('<div style="font-size:var(--fs-xs);color:var(--mut);margin-top:2px">'+srs[0].v+' → '+cur+' '+unit+' since start · +'+((cur-srs[0].v)%1?(cur-srs[0].v).toFixed(1):(cur-srs[0].v))+' added</div>'):'';
+ return '<div class="prog"><div class="pctl" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b style="color:var(--ink)">'+name+'</b> <span style="opacity:.6">· start Pro '+pro+' '+unit+'</span></span>'+chip+'</div><div class="t" style="margin-top:2px"><span style="font-size:var(--fs-md);font-weight:800">'+(cur!=null?cur+' '+unit:'—')+'</span>'+((bk&&vOn&&num(lastR.vest))?'<span style="font-size:var(--fs-xs);color:var(--mut)">'+bk+'</span>':'')+'</div>'+trend+(srs.length>1?bspark(srs,pro):'')+'</div>';}
 document.getElementById('chassis').innerHTML=[
   panel('cha','Strength → HybridX Pro','Latest session · compared to the same wave week last cycle · goal = kg × reps capacity, not 1RM · ✓ when a logged session hits goal weight × goal reps',
     waveLine('Deadlift',D.str,'dl',cfg.goals.dl,'×25','dlr')+waveLine('Strict press',D.str,'pr',cfg.goals.pr,'×25','prr')+waveLine('Back lunge',D.str,'bl',cfg.goals.bl,'×50','blr')
-    +'<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)">Accessories · no HybridX standard</div>'
+    +'<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:var(--fs-xs);letter-spacing:.06em;text-transform:uppercase;color:var(--mut)">Accessories · no HybridX standard</div>'
     +waveLine('Front squat',D.str,'fs',cfg.goals.fs,'×25','fsr')
     +waveLine('Bulgarian split squat',D.str,'bg',null,null,'bgr')
     +waveLine('Leg curl',D.str,'lc',null,null,'lcr')
@@ -902,7 +1023,7 @@ document.getElementById('chassis').innerHTML=[
     stRow('Sled push','push',202,'kg')+stRow('Sled pull','pull',153,'kg')+stRow('Sandbag lunges','lunge',30,'kg')+stRow('Farmers','farm',32,'kg/h')+stRow('Wall balls','wb',9,'kg')+vestRow+
     (function(){var hl=byd(D.hyrox);var lastH=hl.length?hl[hl.length-1]:null;if(!lastH||(!lastH.rounds&&!lastH.wbr&&num(lastH.bur)==null))return '';
      var bits=[];if(lastH.rounds)bits.push('B1·B2·B3 '+lastH.rounds);if(lastH.wbr)bits.push('WB '+lastH.wbr+'/round');if(num(lastH.bur)!=null)bits.push('BBJ '+num(lastH.bur)+' m');
-     return '<div class="kv" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><span class="kvl">Volume last session</span><span style="font-size:12px;font-weight:700">'+bits.join(' · ')+'</span></div>';})());})(),
+     return '<div class="kv" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><span class="kvl">Volume last session</span><span style="font-size:var(--fs-sm);font-weight:700">'+bits.join(' · ')+'</span></div>';})());})(),
   // BADGE HAR TVA KALLOR OCH DET AR AVSIKTLIGT. Fram till 27 aug loggades den pa
   // Roncevic-fliken; darefter i `Tests` (ad hoc, alternativ pa troskelpasset) dar
   // Karen redan bor. Historiken skrivs ALDRIG om, sa kortet laser bada och tar
@@ -915,9 +1036,9 @@ document.getElementById('chassis').innerHTML=[
    var ticks=[25,50,75].map(function(m){var a=(m/100)*2*Math.PI-Math.PI/2;var x1=60+38*Math.cos(a),y1=60+38*Math.sin(a),x2=60+46*Math.cos(a),y2=60+46*Math.sin(a);return '<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="var(--line)" stroke-width="2"/>';}).join('');
    var kar=byd(D.test).filter(function(t){return /karen/i.test(String(t.test||''))&&num(t.result)!=null;}).map(function(t){return P(num(t.result),mmss(num(t.result)),t.date);});
    var kLast=kar.length?kar[kar.length-1]:null;var kBest=kar.length?Math.min.apply(0,kar.map(function(o){return o.v;})):null;
-   var karenHtml='<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:9px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em">Karen · 150 WB for time @9 kg</span>'+(kLast?(kLast.v===kBest?'<span class="bdelta good">PR</span>':'<span class="bdelta acc">best '+mmss(kBest)+'</span>'):'')+'</div><div style="font-size:19px;font-weight:800;margin-top:3px">'+(kLast?mmss(kLast.v):'—')+(kLast?' <span style="font-size:10px;color:var(--mut);font-weight:600">· '+String(kLast.t||'')+'</span>':'')+'</div>'+(kar.length>1?bspark(kar,kBest):'<div style="font-size:9px;color:var(--mut);margin-top:3px">Chassis benchmark · retested fresh, ad hoc · trend after 2 results</div>')+'</div>';
+   var karenHtml='<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:9px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-size:var(--fs-xs);color:var(--mut);text-transform:uppercase;letter-spacing:.04em">Karen · 150 WB for time @9 kg</span>'+(kLast?(kLast.v===kBest?'<span class="bdelta good">PR</span>':'<span class="bdelta acc">best '+mmss(kBest)+'</span>'):'')+'</div><div style="font-size:var(--fs-lg);font-weight:800;margin-top:3px">'+(kLast?mmss(kLast.v):'—')+(kLast?' <span style="font-size:var(--fs-xs);color:var(--mut);font-weight:600">· '+String(kLast.t||'')+'</span>':'')+'</div>'+(kar.length>1?bspark(kar,kBest):'<div style="font-size:var(--fs-xs);color:var(--mut);margin-top:3px">Chassis benchmark · retested fresh, ad hoc · trend after 2 results</div>')+'</div>';
    return panel('cha','Wall balls — badge & Karen','Max unbroken @9 kg · '+src,
-    '<div style="display:flex;align-items:center;gap:16px;margin-top:6px"><svg viewBox="0 0 120 120" style="width:104px;height:104px;flex-shrink:0"><circle cx="60" cy="60" r="42" fill="none" stroke="var(--pan2)" stroke-width="9"/><circle cx="60" cy="60" r="42" fill="none" stroke="var(--acc2)" stroke-width="9" stroke-linecap="round" stroke-dasharray="'+C.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 60 60)"/>'+ticks+'<text x="60" y="57" text-anchor="middle" fill="var(--ink)" font-size="26" font-weight="800">'+best+'</text><text x="60" y="74" text-anchor="middle" fill="var(--mut)" font-size="10">of 100</text></svg><div style="min-width:0"><div style="font-size:15px;font-weight:800;color:var(--acc2)">'+(cfg.goals.wb-best)+' to badge</div><div style="font-size:10.5px;color:var(--mut);margin-top:5px;line-height:1.6">Badge = 100 unbroken.<br>Optional add-on to the threshold session — logged in Tests, ad hoc.</div></div></div>'+karenHtml);})()
+    '<div style="display:flex;align-items:center;gap:16px;margin-top:6px"><svg viewBox="0 0 120 120" style="width:104px;height:104px;flex-shrink:0"><circle cx="60" cy="60" r="42" fill="none" stroke="var(--pan2)" stroke-width="9"/><circle cx="60" cy="60" r="42" fill="none" stroke="var(--acc2)" stroke-width="9" stroke-linecap="round" stroke-dasharray="'+C.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 60 60)"/>'+ticks+'<text x="60" y="57" text-anchor="middle" fill="var(--ink)" font-size="26" font-weight="800">'+best+'</text><text x="60" y="74" text-anchor="middle" fill="var(--mut)" font-size="13" class="svgtx">of 100</text></svg><div style="min-width:0"><div style="font-size:var(--fs-md);font-weight:800;color:var(--acc2)">'+(cfg.goals.wb-best)+' to badge</div><div style="font-size:var(--fs-xs);color:var(--mut);margin-top:5px;line-height:1.6">Badge = 100 unbroken.<br>Optional add-on to the threshold session — logged in Tests, ad hoc.</div></div></div>'+karenHtml);})()
  ,
   (function(){var g=byd(D.grip||[]);
    function ser(f,tag){return g.filter(function(x){return num(x[f])!=null;}).map(function(x){return P(num(x[f]),num(x[f])+' kg '+tag,x.date);});}
@@ -928,21 +1049,24 @@ document.getElementById('chassis').innerHTML=[
     var cur=srs[srs.length-1].v;var c=chipBest(srs,false);
     return '<div><div class="kv"><span class="kvl">'+name+'</span>'+(c?'<span class="bdelta '+c.cls+'">'+c.txt+'</span>':'')+'</div><div class="kvv">'+cur+'<small>kg</small></div>'+(srs.length>1?bspark(srs,bestOf(srs,false)):'')+'</div>';}
    var rC=gr.length?gr[gr.length-1].v:null,lC=gl.length?gl[gl.length-1].v:null;
-   var diffTxt=(rC!=null&&lC!=null)?'<div class="kv" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line)"><span class="kvl">R/L balance</span><span style="font-size:12px;font-weight:700">'+Math.abs(+(rC-lC).toFixed(1))+' kg <span style="color:var(--mut);font-weight:600">· '+(rC>=lC?'right':'left')+' stronger</span></span></div>':'';
+   var diffTxt=(rC!=null&&lC!=null)?'<div class="kv" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line)"><span class="kvl">R/L balance</span><span style="font-size:var(--fs-sm);font-weight:700">'+Math.abs(+(rC-lC).toFixed(1))+' kg <span style="color:var(--mut);font-weight:600">· '+(rC>=lC?'right':'left')+' stronger</span></span></div>':'';
    return panel('cha','Grip strength',sub,'<div class="twocol" style="margin-top:4px">'+hand('Right',gr)+hand('Left',gl)+'</div>'+diffTxt);})()
  ].join('');
  var recF=fdate(D.rec,cut(14)), rh=recF.filter(function(r){return num(r.rhr)!=null;}).map(function(r){return P(num(r.rhr),num(r.rhr)+' bpm',r.date);}), sl=recF.filter(function(r){return num(r.sleep)!=null;}).map(function(r){return P(num(r.sleep),num(r.sleep)+' h',r.date);});
  var wtF=fdate(D.weight,null).filter(function(x){return num(x.kg)!=null;}).map(function(x){return P(num(x.kg),num(x.kg)+' kg',x.date);});
  var slAvg=sl.map(function(o){return o.v;});slAvg=slAvg.length?(slAvg.reduce(function(a,b){return a+b;},0)/slAvg.length).toFixed(1):'—';
  
-function bodyCard(title,series,opt){opt=opt||{};var u=opt.unit||'',dec=opt.decimals||0;function f(v){return v==null?'—':(dec?(+v).toFixed(dec):Math.round(v));}if(!series||!series.length)return '<div class="card panel bcard"><h3>'+title+'</h3><div class="sub">'+(opt.empty||'Start logging')+'</div><div class="na" style="padding:12px 0">No data yet</div></div>';var cur=series[series.length-1].v;var ref=opt.baseline!=null?opt.baseline:series[0].v;var delta=cur-ref;var arrow=delta>0?'▲':(delta<0?'▼':'–');var cls='acc';if(opt.goodLow)cls=(cur<=ref?'good':'warn');if(opt.goodHigh)cls=(cur>=ref?'good':'warn');var dtxt=series.length<2?'first log':arrow+' '+f(Math.abs(delta))+(u?' '+u:'')+' '+(opt.refLabel||'');var rl=opt.baseline!=null?opt.baseline:(series.reduce(function(a,o){return a+o.v;},0)/series.length);return '<div class="card panel bcard" data-desc="'+String(opt.desc||'').replace(/"/g,'')+'"><div class="bhd"><h3>'+title+'</h3><span class="bdelta '+cls+'">'+dtxt+'</span></div><div class="bbig">'+f(cur)+'<small>'+u+'</small></div><div class="sub">'+(opt.sub||'')+'</div>'+bspark(series,rl)+'</div>';}
+function bodyCard(title,series,opt){opt=opt||{};var u=opt.unit||'',dec=opt.decimals||0;function f(v){return v==null?'—':(dec?(+v).toFixed(dec):Math.round(v));}if(!series||!series.length)return card({cls:'panel bcard', title:title, sub:(opt.empty||'Start logging'),
+  meta:'0 logs', desc:opt.desc||title, why:'Nothing logged for this metric yet — the card fills on the first entry.',
+  body:'<div class="na" data-empty="1" style="padding:12px 0">No data yet</div>'});var cur=series[series.length-1].v;var ref=opt.baseline!=null?opt.baseline:series[0].v;var delta=cur-ref;var arrow=delta>0?'▲':(delta<0?'▼':'–');var cls='acc';if(opt.goodLow)cls=(cur<=ref?'good':'warn');if(opt.goodHigh)cls=(cur>=ref?'good':'warn');var dtxt=series.length<2?'first log':arrow+' '+f(Math.abs(delta))+(u?' '+u:'')+' '+(opt.refLabel||'');var rl=opt.baseline!=null?opt.baseline:(series.reduce(function(a,o){return a+o.v;},0)/series.length);return card({cls:'panel bcard', title:title, chip:{cls:cls, txt:dtxt}, desc:opt.desc,
+  body:'<div class="bbig">'+f(cur)+'<small>'+u+'</small></div><div class="sub">'+(opt.sub||'')+'</div>'+bspark(series,rl)});}
 var _rb=Math.round(rhrBase*10)/10;
 var slq=recF.filter(function(r){return num(r.sleepq)!=null;}).map(function(r){return P(num(r.sleepq),num(r.sleepq)+' /100',r.date);});
 document.getElementById('body').innerHTML=[bodyCard('Resting HR',rh,{unit:'bpm',baseline:_rb,refLabel:'vs 14d avg '+_rb,goodLow:true,decimals:0,sub:'dashed = 14-day rolling avg (same as Morning signal) · lower = better',desc:'Resting heart rate vs rolling 14-day average — the same baseline the Morning signal uses.'}),(slq.length?bodyCard('Sleep quality',slq,{unit:'/100',baseline:85,refLabel:'vs green ≥85',goodHigh:true,decimals:0,sub:'hours avg '+slAvg+'h · dashed = green line 85 · ≤70 two days = yellow',desc:'Sleep quality score — the master signal. Green ≥85, yellow at ≤70 two days in a row.'}):bodyCard('Sleep',sl,{unit:'h',decimals:1,refLabel:'vs avg',sub:'avg '+slAvg+'h · last '+sl.length+' nights · dashed = avg',desc:'Sleep hours per night — quality score not yet logged.'})),bodyCard('Weight',wtF,{unit:'kg',decimals:1,refLabel:'since first',sub:wtF.length+' weigh-ins · weekly trend read against max tests · no fixed target',desc:'Body weight weekly trend — read against test performance, no fixed goal weight.'})].join('');
 }
 var vo2=byd(D.test).filter(function(t){return num(t.vo2)!=null;}).map(function(t){return num(t.vo2);});
 var ll=D.lifelab&&D.lifelab[0];var lac='';
-if(ll){var spd=[10,11,12,13],la=[num(ll.l10),num(ll.l11),num(ll.l12),num(ll.l13)];var mxl=Math.max.apply(0,la.filter(function(v){return v!=null;}))||6;var pts=spd.map(function(s,i){return (((s-10)/3)*100).toFixed(0)+','+(52-(la[i]/mxl)*48).toFixed(1);}).join(' ');var y4=(52-(4/mxl)*48).toFixed(1);lac='<svg class="bigspark" viewBox="0 0 100 56" preserveAspectRatio="none"><line x1="0" y1="'+y4+'" x2="100" y2="'+y4+'" stroke="var(--warn)" stroke-width="1" stroke-dasharray="4"/><polyline points="'+pts+'" fill="none" stroke="var(--acc)" stroke-width="2" vector-effect="non-scaling-stroke"/>'+spd.map(function(s,i){return '<rect class="pt" x="'+((((s-10)/3)*100)-16).toFixed(0)+'" y="0" width="32" height="56" fill="transparent" data-d="'+la[i]+' mmol @ '+s+' km/h" data-t="" data-desc="Blood lactate vs running speed (Jan 2026 lab) — sets zones."></rect>';}).join('')+'</svg><div class="axis"><span>10 km/h</span><span>13 km/h</span></div><div class="legend" style="margin-top:5px"><span>'+la.join(' · ')+' mmol/L</span><span>dashed = 4 mmol</span></div>';}
+if(ll){var spd=[10,11,12,13],la=[num(ll.l10),num(ll.l11),num(ll.l12),num(ll.l13)];var mxl=Math.max.apply(0,la.filter(function(v){return v!=null;}))||6;var pts=spd.map(function(s,i){return (((s-10)/3)*100).toFixed(0)+','+(52-(la[i]/mxl)*48).toFixed(1);}).join(' ');var y4=(52-(4/mxl)*48).toFixed(1);lac='<svg class="bigspark" viewBox="0 0 100 56" preserveAspectRatio="none"><line x1="0" y1="'+y4+'" x2="100" y2="'+y4+'" stroke="var(--warn)" stroke-width="1" stroke-dasharray="4"/><polyline points="'+pts+'" fill="none" stroke="var(--acc)" stroke-width="2" vector-effect="non-scaling-stroke"/>'+spd.map(function(s,i){return '<rect class="pt" x="'+((((s-10)/3)*100)-16).toFixed(0)+'" y="0" width="32" height="56" fill="transparent" data-d="'+la[i]+' mmol @ '+s+' km/h" data-t=""></rect>';}).join('')+'</svg><div class="axis"><span>10 km/h</span><span>13 km/h</span></div><div class="legend" style="margin-top:5px"><span>'+la.join(' · ')+' mmol/L</span><span>dashed = 4 mmol</span></div>';}
 (function(){
  var LENS2=[['2K Ski',/2\s*k.*ski|ski.*2\s*k/i,'W37',true],['2K Row',/2\s*k.*(row|rodd)|(row|rodd).*2\s*k/i,'W37',true],['FTP Bike',/ftp/i,'W41',false],['5K Run',/5\s*k.*(run|löp)|(run|löp).*5\s*k/i,'W41',true]];
  var rows=byd(D.test);
@@ -950,7 +1074,10 @@ if(ll){var spd=[10,11,12,13],la=[num(ll.l10),num(ll.l11),num(ll.l12),num(ll.l13)
   // Resultat kan vara tid ("7:12.4") eller tal (245). num() gav 7 för mm:ss — parsa tid först.
   var tval=function(r){var v=String(r.result==null?'':r.result);return v.indexOf(':')>=0?psec(v):num(r.result);};
   var srs=rows.filter(function(r){return t[1].test(String(r.test||''))&&tval(r)!=null;}).map(function(r){return P(tval(r),String(r.result)+' '+(r.unit||''),r.date);});
-  if(!srs.length)return '<div class="card tile" data-desc="Calibrated max test — always rested, same protocol, deload weeks only."><div class="lb">'+t[0]+'</div><div class="na" style="padding:12px 0">Awaiting '+t[2]+'</div></div>';
+  if(!srs.length)return card({cls:'tile', title:t[0], titleCls:'lb', meta:'0 tests',
+  desc:'Calibrated max test — always rested, same protocol, deload weeks only.',
+  why:'No result logged for this test yet — it is run on a deload week.',
+  body:'<div class="na" data-empty="1" style="padding:12px 0">Awaiting '+t[2]+'</div>'});
   var lastV=srs[srs.length-1];
   var trows=rows.filter(function(r){return t[1].test(String(r.test||''))&&tval(r)!=null;});
   var lastR=trows[trows.length-1], prevR=trows.length>1?trows[trows.length-2]:null;
@@ -959,23 +1086,34 @@ if(ll){var spd=[10,11,12,13],la=[num(ll.l10),num(ll.l11),num(ll.l12),num(ll.l13)
   var meta=[];
   if(wv!=null)meta.push('<span style="color:var(--mut)">'+Math.round(wv)+' W avg</span>');
   if(dgL!=null)meta.push(dgL!==null&&dgP!=null&&dgL!==dgP?'<span style="color:var(--warn);font-weight:700">drag '+dgL+' vs '+dgP+'</span>':'<span style="color:var(--mut)">drag '+dgL+'</span>');
-  var metaRow=meta.length?'<div style="font-size:10px;margin-top:2px">'+meta.join(' · ')+'</div>':'';
-  return '<div class="card tile" data-desc="Calibrated max test — always rested, same protocol, deload weeks only. Drag factor must match the previous test or the comparison measures the machine, not the engine."><div class="thd"><div class="lb">'+t[0]+'</div>'+(function(){var dragBad=(dgL!=null&&dgP!=null&&dgL!==dgP);
-    if(dragBad)return '<span class="bdelta warn">not comparable</span>';
-    var cb=chipBest(srs,t[3]);return cb&&cb.txt?'<span class="bdelta '+cb.cls+'">'+cb.txt+'</span>':'';})()+'</div><div class="val">'+(t[3]?mmss(lastV.v):lastV.d)+'</div>'+metaRow+bspark(srs,null)+'</div>';});
+  var metaRow=meta.length?'<div style="font-size:var(--fs-xs);margin-top:2px">'+meta.join(' · ')+'</div>':'';
+  return card({cls:'tile', title:t[0], titleCls:'lb',
+    desc:'Calibrated max test — always rested, same protocol, deload weeks only. Drag factor must match the previous test or the comparison measures the machine, not the engine.',
+    meta:srs.length+' tests',
+    chipRaw:(function(){var dragBad=(dgL!=null&&dgP!=null&&dgL!==dgP);
+    if(dragBad)return '<span class="bdelta warn" data-chip="1">not comparable</span>';
+    var cb=chipBest(srs,t[3]);return cb&&cb.txt?'<span class="bdelta '+cb.cls+'" data-chip="1">'+cb.txt+'</span>':'';})()||null,
+    body:'<div class="val">'+(t[3]?mmss(lastV.v):lastV.d)+'</div>'+metaRow+bspark(srs,null)});});
  // Testschemat las UR CONFIG, aldrig ur ett vecko-ID i koden. Literalen sa
  // 'W37 · Sep 7-13' langt efter att den veckan kunde flyttas, och nasta-test-kortet
  // gissade testet ur strangen 'W41'. Flyttas en testvecka rors ingen kodrad.
  var _tw=(cfg.phases||[]).filter(function(p){return /test/.test(p[3])&&pd(p[1])>=now;}).slice(0,2);
  var _lbl=['Next:','Then:'];
- var sched=_tw.length?('<div class="card" style="margin-bottom:10px" data-desc="Test schedule — one all-out test per test day, never two. Compare at the same HR; 3%+ divergence = tired body, not lost form."><div style="font-size:12px;line-height:1.9">'
+ var sched=_tw.length?card({style:'margin-bottom:var(--sp-4)', title:'Test schedule', titleCls:'k',
+   meta:'from CONFIG.phases',
+   desc:'Test schedule — one all-out test per test day, never two. Compare at the same HR; 3%+ divergence = tired body, not lost form.',
+   body:'<div style="font-size:var(--fs-sm);line-height:1.9">'
    +_tw.map(function(p,i){var a=pd(p[0]),b=pd(p[1]);var qm=/\u00b7\s*quarterly/.test(String(p[4]||''));
      return '<b style="color:var(--acc)">'+_lbl[i]+'</b> '+String(p[4]||'Tests per the plan').replace(/\s*\u00b7\s*quarterly\s*$/,'')
        +' · <b>'+p[2]+' · '+_MN[a.getMonth()]+' '+a.getDate()+'\u2013'+(a.getMonth()===b.getMonth()?'':_MN[b.getMonth()]+' ')+b.getDate()+'</b>'
        +(qm?'<span style="color:var(--mut)"> \u2014 quarterly</span>':'');}).join('<br>')
-   +'</div></div>'):'';
+   +'</div>'}):'';
  document.getElementById('tests').innerHTML=sched+'<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">'+tiles.join('')+'</div>';
-})();document.getElementById('labrow').innerHTML=vo2card(last(vo2))+'<div class="card panel" data-desc="Blood lactate vs running speed — sets your training zones."><h3 style="color:var(--acc)">Lactate curve · Lens 1</h3><div class="sub">Jan 2026 baseline · sets zones</div>'+(lac||'<div class="na">Awaiting lab</div>')+'</div>';
+})();document.getElementById('labrow').innerHTML=vo2card(last(vo2))+card({cls:'panel',
+  title:'Lactate curve · Lens 1', sub:'Jan 2026 baseline · sets zones', meta:'lab Jan 2026',
+  desc:'Blood lactate vs running speed — sets your training zones.',
+  why:(lac?'':'No lactate test logged — zones stay provisional until the next lab.'),
+  body:(lac||'<div class="na" data-empty="1">Awaiting lab</div>')});
 function benchCard(){
  var el=document.getElementById('bench');
  var F=(D.field||[]).filter(function(r){return r.st&&r.med!=null;});
@@ -1023,7 +1161,7 @@ function benchCard(){
   var marks=(sub!=null?'<div class="ftick fsub" style="left:'+posf(sub,p25,med,p75)+'%"></div>'
     +'<div class="ftri" style="left:'+posf(sub,p25,med,p75)+'%"></div>':'')
    +(cmp?'<div class="fdot '+cls+'" style="left:'+posf(raw,p25,med,p75)+'%"></div>':'');
-  return '<div class="frow'+(cmp?'':' dim')+'" data-desc="'+desc.replace(/"/g,'')+'">'
+  return '<div class="frow'+(cmp?'':' dim')+'" tabindex="0" role="group" data-desc="'+desc.replace(/"/g,'')+'">'
    +'<div class="ftop"><span class="flab">'+r.st+'</span><span class="fval">'
    +(raw!=null?'<span style="color:'+(cmp?'var(--ink)':'var(--mut)')+'">'+mmss(raw)+'</span>':'<span style="opacity:.4">—</span>')+chip+'</span></div>'
    +track(p25,med,p75,marks)+'</div>';
@@ -1035,10 +1173,10 @@ function benchCard(){
  var frs='';
  if(fr.med!=null){
   var g1=psec('76:51'),g2=70*60;
-  frs='<div class="fsec">Full race</div><div class="frow" style="border-bottom:0" data-desc="Full race — field p25 '
+  frs='<div class="fsec">Full race</div><div class="frow" tabindex="0" role="group" style="border-bottom:0" data-desc="Full race — field p25 '
    +hms(fr.p25)+' · median '+hms(fr.med)+' · p75 '+hms(fr.p75)+' · AG podium median '+hms(fr.pod)
    +'. Your Open finish is deliberately not plotted: Pro carries heavier sleds, sandbag, farmers and wall balls, so the two totals are not the same race.">'
-   +'<div class="ftop"><span class="flab" style="font-weight:800">Where the goals sit</span><span class="fval" style="font-size:11px">'
+   +'<div class="ftop"><span class="flab" style="font-weight:800">Where the goals sit</span><span class="fval" style="font-size:var(--fs-xs)">'
    +'<span style="opacity:.5">G1</span> <b style="color:var(--acc)">1:16:51</b> <span style="opacity:.5">G2</span> <b style="color:var(--good)">1:10:00</b></span></div>'
    +track(fr.p25,fr.med,fr.p75,
      '<div class="ftick fg1" style="left:'+posf(g1,fr.p25,fr.med,fr.p75)+'%"></div>'
@@ -1081,8 +1219,20 @@ var QUOTES=["The general who wins a battle makes many calculations ere the battl
 var doy=Math.floor((now-new Date(now.getFullYear(),0,0))/DAY);
 document.getElementById('quote').innerHTML=QUOTES[doy%QUOTES.length]+'<span>Sun Tzu · The Art of War</span>';
 renderTrends(0);
-(function(){var tt=document.getElementById('tt');function pos(x,y){tt.style.display='block';tt.style.left=Math.min(x+12,window.innerWidth-160)+'px';tt.style.top=(y+14)+'px';}function render(el){var d=el.getAttribute('data-desc');if(el.classList&&el.classList.contains('pt')){return (d?'<span style="opacity:.7;font-size:10px">'+d+'</span><br>':'')+'<b>'+(el.getAttribute('data-d')||'')+'</b>'+(el.getAttribute('data-t')?'<br><span style="opacity:.55">'+el.getAttribute('data-t')+'</span>':'');}return '<span style="font-size:11px">'+(d||'')+'</span>';}function find(t){return t&&t.closest?(t.closest('.pt')||t.closest('[data-desc]')):null;}document.addEventListener('mousemove',function(e){var el=find(e.target);if(el){tt.innerHTML=render(el);pos(e.clientX,e.clientY);}else tt.style.display='none';});document.addEventListener('touchstart',function(e){var el=find(e.target);if(el&&e.touches[0]){tt.innerHTML=render(el);pos(e.touches[0].clientX,e.touches[0].clientY-46);setTimeout(function(){tt.style.display='none';},1800);}},{passive:true});})();
-document.getElementById('foot').innerHTML='<b>Athlete Signal</b> ⚡ · Live from the training logbook — written with sweat and pain.<br><span style="opacity:.55;font-size:9px">build '+BUILD+' · schema v'+(META&&META.schemaVersion!=null?META.schemaVersion:'?')+'</span>';
+
+
+(function(){var tt=document.getElementById('tt');function pos(x,y){tt.style.display='block';tt.style.left=Math.min(x+12,window.innerWidth-160)+'px';tt.style.top=(y+14)+'px';}function render(el){var d=el.getAttribute('data-desc');
+  // Punkten har ingen egen beskrivning langre — den arver diagrammets.
+  if(!d&&el.closest){var o=el.closest('[data-desc]');if(o)d=o.getAttribute('data-desc');}
+  if(el.classList&&el.classList.contains('pt')){return (d?'<span style="opacity:.7;font-size:var(--fs-xs)">'+d+'</span><br>':'')+'<b>'+(el.getAttribute('data-d')||'')+'</b>'+(el.getAttribute('data-t')?'<br><span style="opacity:.55">'+el.getAttribute('data-t')+'</span>':'');}return '<span style="font-size:var(--fs-xs)">'+(d||'')+'</span>';}function find(t){return t&&t.closest?(t.closest('.pt')||t.closest('[data-desc]')):null;}document.addEventListener('mousemove',function(e){var el=find(e.target);if(el){tt.innerHTML=render(el);pos(e.clientX,e.clientY);}else tt.style.display='none';});// TANGENTBORDET NAR SAMMA SAK SOM MUSEN. Utan den har raden ar `tabindex` bara
+// en plats i tab-ordningen, inte en vag till innehallet.
+document.addEventListener('focusin',function(e){var el=find(e.target);
+  if(el){var r=el.getBoundingClientRect();tt.innerHTML=render(el);pos(r.left,r.bottom-10);}
+  else tt.style.display='none';});
+document.addEventListener('focusout',function(){tt.style.display='none';});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')tt.style.display='none';});
+document.addEventListener('touchstart',function(e){var el=find(e.target);if(el&&e.touches[0]){tt.innerHTML=render(el);pos(e.touches[0].clientX,e.touches[0].clientY-46);setTimeout(function(){tt.style.display='none';},1800);}},{passive:true});})();
+document.getElementById('foot').innerHTML='<b>Athlete Signal</b> ⚡ · Live from the training logbook — written with sweat and pain.<br><span style="opacity:.55;font-size:var(--fs-xs)">build '+BUILD+' · schema v'+(META&&META.schemaVersion!=null?META.schemaVersion:'?')+'</span>';
 
 }
 
@@ -1260,10 +1410,11 @@ function _gate(msg){
     g=document.createElement('div');g.id='gate';
     g.style.cssText='position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:99';
     g.innerHTML='<div style="background:var(--pan);border:1px solid var(--line);border-radius:12px;padding:22px;width:min(320px,86vw)">'
-      +'<div style="font-size:15px;font-weight:800">Athlete Signal <span style="color:var(--acc)">⚡</span></div>'
-      +'<div id="gmsg" style="font-size:11px;color:var(--mut);margin:6px 0 12px">Enter password to view</div>'
-      +'<input id="gpw" type="password" autocomplete="current-password" style="width:100%;background:var(--pan2);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:10px;font-size:15px" />'
-      +'<div style="font-size:9px;opacity:.5;margin-top:8px">build '+BUILD+'</div><button id="gbtn" style="width:100%;margin-top:10px;background:var(--acc);border:0;border-radius:8px;color:#fff;font-weight:700;padding:10px;font-size:13px;cursor:pointer">Open</button></div>';
+      +'<div style="font-size:var(--fs-md);font-weight:800">Athlete Signal <span style="color:var(--acc)">⚡</span></div>'
+      +'<div id="gmsg" style="font-size:var(--fs-xs);color:var(--mut);margin:6px 0 12px">Enter password to view</div>'
+      +'<label for="gpw" style="display:block;font-size:var(--fs-xs);color:var(--mut);margin-bottom:var(--sp-1)">Password</label>'
+      +'<input id="gpw" type="password" autocomplete="current-password" style="min-height:44px;"width:100%;background:var(--pan2);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:10px;font-size:var(--fs-md)" />'
+      +'<div style="font-size:var(--fs-xs);opacity:.5;margin-top:8px">build '+BUILD+'</div><button id="gbtn" style="width:100%;min-height:44px;margin-top:10px;background:#2563eb;border:0;border-radius:8px;color:#fff;font-weight:700;padding:10px;font-size:var(--fs-sm);cursor:pointer">Open</button></div>';
     document.body.appendChild(g);
     function go(){var v=document.getElementById('gpw').value.trim();if(!v)return;try{localStorage.setItem('as_pw',v);}catch(e){}g.remove();_fetch(v);}
     document.getElementById('gbtn').onclick=go;
@@ -1274,7 +1425,9 @@ function _gate(msg){
 }
 function _offline(msg){
   var st=document.getElementById('status');
-  if(st&&!st.innerHTML)st.innerHTML='<div class="card" style="grid-column:1/-1"><div class="k">No connection</div><div style="font-size:12px;color:var(--mut);margin-top:4px">'+(msg||'Could not reach the logbook. Check network and reload.')+'</div></div>';
+  if(st&&!st.innerHTML)st.innerHTML=card({style:'grid-column:1/-1', title:'No connection', titleCls:'k',
+    meta:'no data', why:'The dashboard renders only what it can read — nothing is cached or guessed.',
+    body:'<div style="font-size:var(--fs-sm);color:var(--mut);margin-top:var(--sp-1)" data-empty="1">'+(msg||'Could not reach the logbook. Check network and reload.')+'</div>'});
   try{document.getElementById('cd').textContent='—';}catch(e){}
 }
 window.__hx=function(raw){
