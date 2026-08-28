@@ -144,7 +144,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <div class="quote" id="quote"></div>
 <div class="foot" id="foot"></div></div><div id="tt"></div>
 <script>
-var BUILD="3.20 · 2026-08-27 · schema v13 — ett erg-pass är ett erg-pass: ski, rodd och cykel har identiskt fältkontrakt inkl. maxtesten · kadens krävs överallt löpning sker";
+var BUILD="3.21 · 2026-08-27 · badge-testet flyttat ur Roncevic till Tests — kortet läser båda källorna så pre-log-baslinjen inte tappas";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -892,14 +892,21 @@ document.getElementById('chassis').innerHTML=[
     (function(){var hl=byd(D.hyrox);var lastH=hl.length?hl[hl.length-1]:null;if(!lastH||(!lastH.rounds&&!lastH.wbr&&num(lastH.bur)==null))return '';
      var bits=[];if(lastH.rounds)bits.push('B1·B2·B3 '+lastH.rounds);if(lastH.wbr)bits.push('WB '+lastH.wbr+'/round');if(num(lastH.bur)!=null)bits.push('BBJ '+num(lastH.bur)+' m');
      return '<div class="kv" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><span class="kvl">Volume last session</span><span style="font-size:12px;font-weight:700">'+bits.join(' · ')+'</span></div>';})());})(),
-  (function(){var bb=byd(D.ron).map(function(r){return num(r.badge);}).filter(function(v){return v!=null;});var best=bb.length?Math.max.apply(0,bb):cfg.goals.wb_pr;var src=bb.length?'logged in Roncevic':'pre-log baseline';
+  // BADGE HAR TVA KALLOR OCH DET AR AVSIKTLIGT. Fram till 27 aug loggades den pa
+  // Roncevic-fliken; darefter i `Tests` (ad hoc, alternativ pa troskelpasset) dar
+  // Karen redan bor. Historiken skrivs ALDRIG om, sa kortet laser bada och tar
+  // hogsta vardet — annars tappar det pre-log-baslinjen den dag flytten sker.
+  (function(){var bb=byd(D.ron).map(function(r){return num(r.badge);}).filter(function(v){return v!=null;})
+     .concat(byd(D.test).filter(function(t){return /badge/i.test(String(t.test||''));})
+       .map(function(t){return num(t.result);}).filter(function(v){return v!=null;}));
+   var best=bb.length?Math.max.apply(0,bb):cfg.goals.wb_pr;var src=bb.length?'max unbroken · logged in Tests':'pre-log baseline';
    var pct=Math.min(100,best/cfg.goals.wb*100);var C=2*Math.PI*42;var off=C*(1-pct/100);
    var ticks=[25,50,75].map(function(m){var a=(m/100)*2*Math.PI-Math.PI/2;var x1=60+38*Math.cos(a),y1=60+38*Math.sin(a),x2=60+46*Math.cos(a),y2=60+46*Math.sin(a);return '<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="var(--line)" stroke-width="2"/>';}).join('');
    var kar=byd(D.test).filter(function(t){return /karen/i.test(String(t.test||''))&&num(t.result)!=null;}).map(function(t){return P(num(t.result),mmss(num(t.result)),t.date);});
    var kLast=kar.length?kar[kar.length-1]:null;var kBest=kar.length?Math.min.apply(0,kar.map(function(o){return o.v;})):null;
    var karenHtml='<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:9px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em">Karen · 150 WB for time @9 kg</span>'+(kLast?(kLast.v===kBest?'<span class="bdelta good">PR</span>':'<span class="bdelta acc">best '+mmss(kBest)+'</span>'):'')+'</div><div style="font-size:19px;font-weight:800;margin-top:3px">'+(kLast?mmss(kLast.v):'—')+(kLast?' <span style="font-size:10px;color:var(--mut);font-weight:600">· '+String(kLast.t||'')+'</span>':'')+'</div>'+(kar.length>1?bspark(kar,kBest):'<div style="font-size:9px;color:var(--mut);margin-top:3px">Chassis benchmark · retested fresh, ad hoc · trend after 2 results</div>')+'</div>';
    return panel('cha','Wall balls — badge & Karen','Max unbroken @9 kg · '+src,
-    '<div style="display:flex;align-items:center;gap:16px;margin-top:6px"><svg viewBox="0 0 120 120" style="width:104px;height:104px;flex-shrink:0"><circle cx="60" cy="60" r="42" fill="none" stroke="var(--pan2)" stroke-width="9"/><circle cx="60" cy="60" r="42" fill="none" stroke="var(--acc2)" stroke-width="9" stroke-linecap="round" stroke-dasharray="'+C.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 60 60)"/>'+ticks+'<text x="60" y="57" text-anchor="middle" fill="var(--ink)" font-size="26" font-weight="800">'+best+'</text><text x="60" y="74" text-anchor="middle" fill="var(--mut)" font-size="10">of 100</text></svg><div style="min-width:0"><div style="font-size:15px;font-weight:800;color:var(--acc2)">'+(cfg.goals.wb-best)+' to badge</div><div style="font-size:10.5px;color:var(--mut);margin-top:5px;line-height:1.6">Badge = 100 unbroken.<br>Tested in Roncevic — Fridays.</div></div></div>'+karenHtml);})()
+    '<div style="display:flex;align-items:center;gap:16px;margin-top:6px"><svg viewBox="0 0 120 120" style="width:104px;height:104px;flex-shrink:0"><circle cx="60" cy="60" r="42" fill="none" stroke="var(--pan2)" stroke-width="9"/><circle cx="60" cy="60" r="42" fill="none" stroke="var(--acc2)" stroke-width="9" stroke-linecap="round" stroke-dasharray="'+C.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 60 60)"/>'+ticks+'<text x="60" y="57" text-anchor="middle" fill="var(--ink)" font-size="26" font-weight="800">'+best+'</text><text x="60" y="74" text-anchor="middle" fill="var(--mut)" font-size="10">of 100</text></svg><div style="min-width:0"><div style="font-size:15px;font-weight:800;color:var(--acc2)">'+(cfg.goals.wb-best)+' to badge</div><div style="font-size:10.5px;color:var(--mut);margin-top:5px;line-height:1.6">Badge = 100 unbroken.<br>Optional add-on to the threshold session — logged in Tests, ad hoc.</div></div></div>'+karenHtml);})()
  ,
   (function(){var g=byd(D.grip||[]);
    function ser(f,tag){return g.filter(function(x){return num(x[f])!=null;}).map(function(x){return P(num(x[f]),num(x[f])+' kg '+tag,x.date);});}
