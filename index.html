@@ -185,7 +185,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 // for Mattias och coach Ulrik — och ingen av dem bygger dashboarden. Vad som
 // andrades hor hemma i handoffen, keyat pa numret. Den 29 aug stod hela
 // pass C:s andringslogg har: "omdesign: en kortfabrik med rubrik + chip ...".
-var BUILD="3.25 · 2026-08-29";
+var BUILD="3.26 · 2026-08-29";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -302,6 +302,21 @@ function splitList(v){
 // Snittpulsen pa ett troskelpass innehaller uppvarmning och vila. Den ar darfor
 // bara jamforbar mot ett pass med SAMMA struktur — vilket ar precis det urval
 // `comp` gor.
+// DOMEN BOR PA ETT STALLE (§8g). Master §6: "framsteg = samma fart till LAGRE
+// puls" — samma dom galler cykelns watt. Tva kopior driver isar.
+// `dOut` ar vand sa POSITIVT = battre; `tol` ar brusgransen i outputens enhet.
+var HR_TOL_=2;   // bpm — under detta ar skillnaden brus, inte kostnad
+function costGrade_(dOut,dHr,tol){
+  var better=dOut>tol, worse=dOut<-tol, cheaper=dHr<-HR_TOL_, dearer=dHr>HR_TOL_;
+  if(better&&cheaper) return 'better+cheaper';
+  if(better&&dearer)  return 'better+dearer';
+  if(better)          return 'better';
+  if(worse&&cheaper)  return 'worse+cheaper';
+  if(worse)           return 'worse';
+  if(cheaper)         return 'same+cheaper';
+  if(dearer)          return 'same+dearer';
+  return 'same';
+}
 function costVerdict(b){
   if(!b.prev) return {cls:'acc', txt:'first on this structure'};
   var p1=psec(b.last[b.M.pace]), p0=psec(b.prev[b.M.pace]);
@@ -309,17 +324,51 @@ function costVerdict(b){
   if(p1==null||p0==null) return {cls:'', txt:'pace missing'};
   if(h1==null||h0==null) return {cls:'', txt:'cost unknown',
     why:'Avg HR missing on '+(h1==null?'this':'the previous')+' session — pace alone cannot say whether it got cheaper'};
-  var dp=p1-p0, dh=h1-h0, pTol=p0*0.01;
-  var faster=dp<-pTol, slower=dp>pTol, cheaper=dh<-2, dearer=dh>2;
-  var d=(dp<0?'−':'+')+mmss(Math.abs(dp))+' · '+(dh<0?'−':'+')+Math.abs(Math.round(dh))+' bpm';
-  if(faster&&cheaper)  return {cls:'good', txt:'faster at lower cost', delta:d};
-  if(faster&&dearer)   return {cls:'acc',  txt:'faster, paid for',     delta:d};
-  if(faster)           return {cls:'good', txt:'faster, same cost',    delta:d};
-  if(slower&&cheaper)  return {cls:'',     txt:'easier, slower',       delta:d};
-  if(slower)           return {cls:'warn', txt:'slower',               delta:d};
-  if(cheaper)          return {cls:'good', txt:'same pace, lower cost',delta:d};
-  if(dearer)           return {cls:'warn', txt:'same pace, higher cost',delta:d};
-  return {cls:'', txt:'unchanged', delta:d};
+  var dp=p1-p0, dh=h1-h0;
+  // Pace: LAGRE ar battre. Outputen vands darfor innan den gar in i tabellen.
+  var W={'better+cheaper':['good','faster at lower cost'],
+         'better+dearer' :['acc', 'faster, paid for'],
+         'better'        :['good','faster, same cost'],
+         'worse+cheaper' :['',    'easier, slower'],
+         'worse'         :['warn','slower'],
+         'same+cheaper'  :['good','same pace, lower cost'],
+         'same+dearer'   :['warn','same pace, higher cost'],
+         'same'          :['',    'unchanged']}[costGrade_(-dp,dh,p0*0.01)];
+  return {cls:W[0], txt:W[1],
+    delta:(dp<0?'−':'+')+mmss(Math.abs(dp))+' · '+(dh<0?'−':'+')+Math.abs(Math.round(dh))+' bpm'};
+}
+// CYKELNS SIDA AV SAMMA DOM (§8g). Watt ar erg-passets matvarde, puls dess
+// kostnad. Kortet het forr "At fixed easy HR" — pulsen ar INTE fast, sa det
+// pastaendet byttes mot en dom kortet faktiskt kan halla.
+function wattVerdict(cur,prev){
+  if(!cur)  return {cls:'',    txt:'no logged session'};
+  if(!prev) return {cls:'acc', txt:'first logged session'};
+  var w1=num(cur.watt), w0=num(prev.watt), h1=num(cur.bpm), h0=num(prev.bpm);
+  if(w1==null||w0==null) return {cls:'', txt:'watt missing'};
+  if(h1==null||h0==null) return {cls:'', txt:'cost unknown',
+    why:'Avg HR missing on '+(h1==null?'this':'the previous')+' session — watt alone cannot say whether the engine got cheaper'};
+  var dw=w1-w0, dh=h1-h0;
+  var W={'better+cheaper':['good','stronger at lower cost'],
+         'better+dearer' :['acc', 'stronger, paid for'],
+         'better'        :['good','stronger, same cost'],
+         'worse+cheaper' :['',    'easier, less output'],
+         'worse'         :['warn','less output'],
+         'same+cheaper'  :['good','same watt, lower cost'],
+         'same+dearer'   :['warn','same watt, higher cost'],
+         'same'          :['',    'unchanged']}[costGrade_(dw,dh,Math.abs(w0)*0.01)];
+  return {cls:W[0], txt:W[1],
+    delta:(dw<0?'−':'+')+Math.abs(Math.round(dw))+' W · '+(dh<0?'−':'+')+Math.abs(Math.round(dh))+' bpm'};
+}
+// DRAG AR INFORMATIVT, ALDRIG EN SPARR (§7i). Watt ar giltigt tvars over drag,
+// men 80 rpm mot DF 79 ar en annan mekanisk uppgift an mot DF 72 — serien laser
+// man som segment med ett skarvstalle. Ett enda tal (det senaste) dolde skarven.
+function dragSpan_(rows){
+  var v=rows.map(function(r){return num(r.drag);}).filter(function(x){return x!=null;});
+  if(!v.length) return {n:0, miss:rows.length};
+  var mn=Math.min.apply(0,v), mx=Math.max.apply(0,v), now=v[v.length-1], run=0;
+  for(var i=v.length-1;i>=0&&v[i]===now;i--) run++;
+  return {n:v.length, miss:rows.length-v.length, min:mn, max:mx, now:now, run:run,
+    txt:(mn===mx?'drag '+mn:'drag '+mn+'–'+mx)};
 }
 // SPRIDNINGEN MELLAN INTERVALLERNA — troskelpassets viktigaste tal. Den gar inte
 // att rakna ur ett snitt, darfor kolumnen `Interval splits` (schema v10).
@@ -751,7 +800,10 @@ function barsvg(series,desc,wip){if(!series.length&&!wip)return '<div class="na"
   +String(all[all.length-1].t||'').slice(5)+(wip?' · pågår':'')+'</span></div>';}
 function renderTrends(w){var c=cut(w);
  var vv={}; fdate(D.run,c).forEach(function(r){var k=iso(pd(r.date));vv[k]=(vv[k]||0)+(num(r.dist)||0);});fdate(D.vo2||[],c).forEach(function(r){var k=iso(pd(r.date));vv[k]=(vv[k]||0)+(num(r.dist)||0);});fdate(D.thr,c).filter(function(t){return t.type==='Run';}).forEach(function(t){var k=iso(pd(t.date));vv[k]=(vv[k]||0)+thrKm(t);});var vkk=Object.keys(vv).sort();
- var wa=fdate(D.bike,c).filter(function(b){return num(b.watt)!=null;}).map(function(b){return P(num(b.watt),num(b.watt)+' W',b.date);});
+ // Draget per punkt gor skarven synlig utan att ett datum hardkodas.
+ var bikeRows=fdate(D.bike,c).filter(function(b){return num(b.watt)!=null;});
+ var wa=bikeRows.map(function(b){var h=num(b.bpm),df=num(b.drag);
+   return P(num(b.watt),num(b.watt)+' W'+(h!=null?' · '+h+' bpm':'')+(df!=null?' · DF '+df:''),b.date);});
  var rt=fdate(D.ron,c).map(function(r){var s=['v1','v2','v3','v4'].reduce(function(a,k){return a+(num(r[k])||0);},0);return s>0?P(s,mmss(s),r.date):null;}).filter(function(o){return o;});
  // ══ TROSKELN — SVARAR "BLIR JAG SNABBARE?" (build 3.14) ══════════════
  // Master: "Framsteg = samma fart till LAGRE PULS." Pace ensamt svarar inte pa
@@ -1001,7 +1053,20 @@ document.getElementById('engine').innerHTML=[
     +(avg4!=null?'4-wk avg '+(avg4/60).toFixed(1)+' h':'')+'</span></div>',
     'Weekly hours of low-intensity work — easy/long runs and steady bike — classified by what the session was FOR (its Zone label), never by where heart rate landed. A Z2 session that sits mostly in HR Z1 still counts in full: that is how session-goal classification works, and volume is what builds the aerobic base. Ramp target +10-15%/wk.');})(),
   mpanel('eng','Run cadence','Running economy · road + treadmill threshold · goal '+cfg.goals.cad+'+ spm',((last(cadS)||{}).v!=null?(last(cadS)||{}).v+' spm':'—'),chipGoal((last(cadS)||{}).v,cfg.goals.cad,true),cadS,cfg.goals.cad,null,'Running cadence in steps/min — shorter steps, better economy. Goal 170+.'),
-  mpanel('eng','Z2 BikeErg watt','At fixed easy HR · higher = better'+(function(){var r=fdate(D.bike,c).filter(function(b){return num(b.drag)!=null;});return r.length?' · drag '+num(r[r.length-1].drag):'';})(),((last(wa)||{}).v!=null?Math.round((last(wa)||{}).v)+' W':'—'),chipBest(wa,false),wa,bestOf(wa,false),null,'Z2 bike power at fixed easy HR — higher = more efficient engine.'),
+  (function(){
+   var cur=bikeRows[bikeRows.length-1]||null, prev=bikeRows[bikeRows.length-2]||null;
+   var v=wattVerdict(cur,prev), ds=dragSpan_(bikeRows), hr=cur?num(cur.bpm):null;
+   var notes=[];
+   if(v.delta)notes.push(v.delta+' vs '+String(prev.date).slice(5));
+   if(v.why)notes.push('<span class="nain">'+v.why+'</span>');
+   if(ds.n)notes.push(ds.txt+(ds.run>1?' · held at '+ds.now+' for '+ds.run+' sessions':''));
+   if(ds.miss)notes.push('drag not logged on '+ds.miss+' earlier session'+(ds.miss>1?'s':''));
+   return mpanel('eng','Z2 BikeErg — watt at cost',
+    'Steady Z2 · more watt at the same or lower HR = progress',
+    (cur?Math.round(num(cur.watt))+'<small> W @ '+(hr!=null?hr+' bpm':'— bpm')+'</small>':'—'),
+    v.txt?{cls:v.cls,txt:v.txt}:null, wa, bestOf(wa,false),
+    bspark(wa,bestOf(wa,false))+(notes.length?'<div class="foot-note">'+notes.join(' · ')+'</div>':''),
+    'Z2 bike power read against what it cost in heart rate. Master: progress is the same work at a LOWER heart rate — watt alone can be bought by pushing harder. Watt is valid at every drag factor, so the series is never split; drag rides along on each point because a heavier drag is a different mechanical task at the same cadence.');})(),
   mpanel('eng span','Engine — time by zone','Where the engine is built · Z2 durability + Z4 threshold = the workhorses (coach)',((_zt>1?(_zt/60).toFixed(1):'—')+'<small> h engine</small>'),(_zt>1?{cls:'acc',txt:'Z2+Z4 '+_z24+'%'}:null),null,null,zoneBody,'Training time across the 5 lab-calibrated zones. One rule, no exceptions: a session counts only if it has a logged zone split — watch raw split on run, threshold, Hyrox, Roncevic and Joker; erg-app split (bike-calibrated) on BikeErg. Sessions without a split are not counted and are named below the bars. Threshold quality is judged by whether a predetermined output band was HELD and by the spread between intervals — never by HR, and never by total metres.')
  ].join('');
 function stLast(f){var a=byd(D.hyrox).map(function(h){return num(h[f]);}).filter(function(v){return v!=null;});return a.length?a[a.length-1]:null;}
