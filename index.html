@@ -185,7 +185,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 // for Mattias och coach Ulrik — och ingen av dem bygger dashboarden. Vad som
 // andrades hor hemma i handoffen, keyat pa numret. Den 29 aug stod hela
 // pass C:s andringslogg har: "omdesign: en kortfabrik med rubrik + chip ...".
-var BUILD="3.26 · 2026-08-29";
+var BUILD="3.27 · 2026-09-02";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -408,13 +408,13 @@ var CONFIG = {"races": [["2026-12-11", "Stockholm"], ["2027-03-25", "Copenhagen"
 // MAP är ENDA källan för både adapt() och kolumnkontrollen. En kolumn som inte
 // står här läses inte av något kort; en kolumn som står här MÅSTE finnas i
 // payloaden, annars ritas ett rött varningskort i stället för ett tomt kort.
-var EXPECT_SCHEMA = 13;
+var EXPECT_SCHEMA = 14;
 var MAP = {
   run:    {tab:'Running',   cols:{date:'Date',dist:'Distance (km)',time:'Time (min)',cad:'Cadence (spm)',zone:'Zone',hr:'Avg HR (bpm)',split:'Zone split'}},
   bike:   {tab:'BikeErg',      cols:{date:'Date',time:'Time (min)',dist:'Distance (km)',bpm:'Avg HR',watt:'Avg watt',zone:'Zone',type:'Type',split:'Zone split',damper:'Damper',drag:'Drag factor'}},
   thr:    {tab:'Threshold', cols:{date:'Date',type:'Type',ints:'Intervals',len:'Length (min/int)',meters:'Total meters',pace:'Avg /500m',pacekm:'Pace /km',watt:'Avg watt',bpm:'Avg HR',split:'Zone split',damper:'Damper',drag:'Drag factor',incline:'Incline (%)',splits:'Interval splits',effort:'Effort (1-10)',cad:'Cadence (spm)'}},
   str:    {tab:'Strength',  cols:{date:'Date',dl:'Deadlift (kg)',dlr:'DL reps',fs:'Front squat (kg)',fsr:'FS reps',pr:'Strict press (kg)',prr:'SP reps',bg:'Bulgarian (kg/h)',bgr:'BS reps/leg',bl:'Back lunge (kg/h)',blr:'BL reps/leg',lc:'Leg curl (kg/ben)',lcr:'LC reps',le:'Leg ext (kg/ben)',ler:'LE reps'}},
-  hyrox:  {tab:'Hyrox',     cols:{date:'Date',push:'Sled push (kg)',lunge:'Lunges (kg)',pull:'Sled pull (kg)',farm:'Farmers (kg/hand)',vest:'Vest (kg)',len:'Session length (min)',split:'Zone split',wb:'Wall balls (kg)',bur:'Burpee broad jump (m)',rounds:'Rounds (B1·B2·B3)',wbr:'WB reps/round'}},
+  hyrox:  {tab:'Hyrox',     cols:{date:'Date',push:'Sled push (kg)',lunge:'Lunges (kg)',pull:'Sled pull (kg)',farm:'Farmers (kg/hand)',vest:'Vest (kg)',len:'Session length (min)',split:'Zone split',wb:'Wall balls (kg)',bur:'Burpee broad jump (m)',rounds:'Rounds (B1·B2·B3)',wbr:'WB reps/round',variant:'Variant'}},
   ron:    {tab:'Roncevic',  cols:{date:'Date',wave:'Wave',wb:'WB weight (kg)',v1:'Round 1 (s)',v2:'Round 2 (s)',v3:'Round 3 (s)',v4:'Round 4 (s)',badge:'Badge WB',split:'Zone split'}},
   rec:    {tab:'Recovery',  cols:{date:'Date',sleep:'Sleep (h)',sleepq:'Sleep quality (1-100)',rhr:'Resting HR (bpm)',mot:'Motivation (green/yellow/red)'}},
   weight: {tab:'Weight',    cols:{date:'Date',kg:'Weight (kg)'}},
@@ -1070,14 +1070,20 @@ document.getElementById('engine').innerHTML=[
   mpanel('eng span','Engine — time by zone','Where the engine is built · Z2 durability + Z4 threshold = the workhorses (coach)',((_zt>1?(_zt/60).toFixed(1):'—')+'<small> h engine</small>'),(_zt>1?{cls:'acc',txt:'Z2+Z4 '+_z24+'%'}:null),null,null,zoneBody,'Training time across the 5 lab-calibrated zones. One rule, no exceptions: a session counts only if it has a logged zone split — watch raw split on run, threshold, Hyrox, Roncevic and Joker; erg-app split (bike-calibrated) on BikeErg. Sessions without a split are not counted and are named below the bars. Threshold quality is judged by whether a predetermined output band was HELD and by the spread between intervals — never by HR, and never by total metres.')
  ].join('');
 function stLast(f){var a=byd(D.hyrox).map(function(h){return num(h[f]);}).filter(function(v){return v!=null;});return a.length?a[a.length-1]:null;}
-function stRow(name,f,pro,unit){var rows=byd(D.hyrox).filter(function(h){return num(h[f])!=null;});
+// `fixed` = stationen VAGAS INTE (master §7). Utan den star farmers pa
+// "at start (Pro)" for alltid och laser som en stannad progression.
+// VARIANTFILTRERING BEHOVS INTE, och det ar MATT (verify.js): `num(h[f])!=null`
+// ger redan en ren serie, eftersom en station som bara kors i en variant ar tom
+// pa den andras rader. Wall balls och vasten blandas med FLIT — bada varianterna.
+function stRow(name,f,pro,unit,fixed){var rows=byd(D.hyrox).filter(function(h){return num(h[f])!=null;});
  var vOn=vestApplies(f);   // vasten bars bara pa wall balls + lunges
  var srs=rows.map(function(h){var ve=vOn?(num(h.vest)||0):0;var tot=+(num(h[f])+ve).toFixed(1);return P(tot,tot+' '+unit+(ve?' ('+num(h[f])+'+'+ve+' vest)':''),h.date);});
  var lastR=rows.length?rows[rows.length-1]:null;var cur=srs.length?srs[srs.length-1].v:null;var d=cur!=null?+(cur-pro).toFixed(1):null;
- var chip=cur==null?'<span class="bdelta">awaiting first log</span>':(d>0?'<span class="bdelta good">+'+d+' over Pro</span>':(d===0?'<span class="bdelta acc">at start (Pro)</span>':'<span class="bdelta warn">'+d+' vs Pro</span>'));
+ var chip=cur==null?'<span class="bdelta">awaiting first log</span>':(fixed?'<span class="bdelta acc">not waved · Pro weight</span>':(d>0?'<span class="bdelta good">+'+d+' over Pro</span>':(d===0?'<span class="bdelta acc">at start (Pro)</span>':'<span class="bdelta warn">'+d+' vs Pro</span>')));
  var bk=lastR?(num(lastR[f])+((vOn&&num(lastR.vest))?' + '+num(lastR.vest)+' vest':'')):'';
- var trend=srs.length>1?('<div style="font-size:var(--fs-xs);color:var(--mut);margin-top:2px">'+srs[0].v+' → '+cur+' '+unit+' since start · +'+((cur-srs[0].v)%1?(cur-srs[0].v).toFixed(1):(cur-srs[0].v))+' added</div>'):'';
- return '<div class="prog"><div class="pctl" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b style="color:var(--ink)">'+name+'</b> <span style="opacity:.6">· start Pro '+pro+' '+unit+'</span></span>'+chip+'</div><div class="t" style="margin-top:2px"><span style="font-size:var(--fs-md);font-weight:800">'+(cur!=null?cur+' '+unit:'—')+'</span>'+((bk&&vOn&&num(lastR.vest))?'<span style="font-size:var(--fs-xs);color:var(--mut)">'+bk+'</span>':'')+'</div>'+trend+(srs.length>1?bspark(srs,pro):'')+'</div>';}
+ var trend=(!fixed&&srs.length>1)?('<div style="font-size:var(--fs-xs);color:var(--mut);margin-top:2px">'+srs[0].v+' → '+cur+' '+unit+' since start · +'+((cur-srs[0].v)%1?(cur-srs[0].v).toFixed(1):(cur-srs[0].v))+' added</div>'):'';
+ var lead=fixed?('· Pro weight '+pro+' '+unit+' — handles have no intermediate steps'):('· start Pro '+pro+' '+unit);
+ return '<div class="prog"><div class="pctl" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b style="color:var(--ink)">'+name+'</b> <span style="opacity:.6">'+lead+'</span></span>'+chip+'</div><div class="t" style="margin-top:2px"><span style="font-size:var(--fs-md);font-weight:800">'+(cur!=null?cur+' '+unit:'—')+'</span>'+((bk&&vOn&&num(lastR.vest))?'<span style="font-size:var(--fs-xs);color:var(--mut)">'+bk+'</span>':'')+'</div>'+trend+(srs.length>1?bspark(srs,pro):'')+'</div>';}
 document.getElementById('chassis').innerHTML=[
   panel('cha','Strength → HybridX Pro','Latest session · compared to the same wave week last cycle · goal = kg × reps capacity, not 1RM · ✓ when a logged session hits goal weight × goal reps',
     waveLine('Deadlift',D.str,'dl',cfg.goals.dl,'×25','dlr')+waveLine('Strict press',D.str,'pr',cfg.goals.pr,'×25','prr')+waveLine('Back lunge',D.str,'bl',cfg.goals.bl,'×50','blr')
@@ -1089,11 +1095,15 @@ document.getElementById('chassis').innerHTML=[
   (function(){var vests=byd(D.hyrox).map(function(h){return num(h.vest);}).filter(function(v){return v!=null;});var vlast=vests.length?vests[vests.length-1]:null;
    var vestSrs=byd(D.hyrox).filter(function(h){return num(h.vest)!=null;}).map(function(h){return P(num(h.vest),num(h.vest)+' kg',h.date);});
    var vestRow='<div class="prog" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><div class="pctl" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="min-width:0"><b style="color:var(--ink)">Vest</b> <span style="opacity:.6">· the only wave lever there — balls come in 9 or 14 kg, sandbag only 30 · race = none</span></span>'+(vlast!=null?'<span class="bdelta good">'+vlast+' kg</span>':'<span class="bdelta">logs from next session</span>')+'</div>'+(vestSrs.length>1?bspark(vestSrs,0):'')+'</div>';
-   return panel('cha','Hyrox stations — wave load','Wave = station weight · vest counts on wall balls + lunges only · start = Pro race weight · progress = kg ABOVE Pro',
-    stRow('Sled push','push',202,'kg')+stRow('Sled pull','pull',153,'kg')+stRow('Sandbag lunges','lunge',30,'kg')+stRow('Farmers','farm',32,'kg/h')+stRow('Wall balls','wb',9,'kg')+vestRow+
-    (function(){var hl=byd(D.hyrox);var lastH=hl.length?hl[hl.length-1]:null;if(!lastH||(!lastH.rounds&&!lastH.wbr&&num(lastH.bur)==null))return '';
+   return panel('cha','Hyrox stations — wave load','Wave = weight only, never distance or reps · sled kg on push + pull, vest on wall balls + lunges · farmers and burpees are not waved · start = Pro race weight',
+    stRow('Sled push','push',202,'kg')+stRow('Sled pull','pull',153,'kg')+stRow('Sandbag lunges','lunge',30,'kg')+stRow('Farmers','farm',32,'kg/h',true)+stRow('Wall balls','wb',9,'kg')+vestRow+
+    // VILKEN VARIANT RADEN GALLER MASTE STA UT: raden ar den SENASTE oavsett
+     // variant, och med A·B·A·B vaxlar den mellan tva passformer (master §6).
+     (function(){var hl=byd(D.hyrox);var lastH=hl.length?hl[hl.length-1]:null;
+     if(!lastH||(!lastH.rounds&&!lastH.wbr&&num(lastH.bur)==null&&!lastH.variant))return '';
      var bits=[];if(lastH.rounds)bits.push('B1·B2·B3 '+lastH.rounds);if(lastH.wbr)bits.push('WB '+lastH.wbr+'/round');if(num(lastH.bur)!=null)bits.push('BBJ '+num(lastH.bur)+' m');
-     return '<div class="kv" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><span class="kvl">Volume last session</span><span style="font-size:var(--fs-sm);font-weight:700">'+bits.join(' · ')+'</span></div>';})());})(),
+     var lab='Volume last session'+(lastH.variant?' · variant '+lastH.variant:' · before the A/B split');
+     return '<div class="kv" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><span class="kvl">'+lab+'</span><span style="font-size:var(--fs-sm);font-weight:700">'+(bits.join(' · ')||'—')+'</span></div>';})());})(),
   // BADGE HAR TVA KALLOR OCH DET AR AVSIKTLIGT. Fram till 27 aug loggades den pa
   // Roncevic-fliken; darefter i `Tests` (ad hoc, alternativ pa troskelpasset) dar
   // Karen redan bor. Historiken skrivs ALDRIG om, sa kortet laser bada och tar
