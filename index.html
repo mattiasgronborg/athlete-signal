@@ -185,7 +185,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 // for Mattias och coach Ulrik — och ingen av dem bygger dashboarden. Vad som
 // andrades hor hemma i handoffen, keyat pa numret. Den 29 aug stod hela
 // pass C:s andringslogg har: "omdesign: en kortfabrik med rubrik + chip ...".
-var BUILD="3.27 · 2026-09-02";
+var BUILD="3.28 · 2026-09-08";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -408,7 +408,7 @@ var CONFIG = {"races": [["2026-12-11", "Stockholm"], ["2027-03-25", "Copenhagen"
 // MAP är ENDA källan för både adapt() och kolumnkontrollen. En kolumn som inte
 // står här läses inte av något kort; en kolumn som står här MÅSTE finnas i
 // payloaden, annars ritas ett rött varningskort i stället för ett tomt kort.
-var EXPECT_SCHEMA = 14;
+var EXPECT_SCHEMA = 15;
 var MAP = {
   run:    {tab:'Running',   cols:{date:'Date',dist:'Distance (km)',time:'Time (min)',cad:'Cadence (spm)',zone:'Zone',hr:'Avg HR (bpm)',split:'Zone split'}},
   bike:   {tab:'BikeErg',      cols:{date:'Date',time:'Time (min)',dist:'Distance (km)',bpm:'Avg HR',watt:'Avg watt',zone:'Zone',type:'Type',split:'Zone split',damper:'Damper',drag:'Drag factor'}},
@@ -420,8 +420,12 @@ var MAP = {
   weight: {tab:'Weight',    cols:{date:'Date',kg:'Weight (kg)'}},
   grip:   {tab:'Grip',      cols:{date:'Date',r:'Right (kg)',l:'Left (kg)'}},
   lifelab:{tab:'LifeLab',   cols:{date:'Test date',comment:'Comment',l10:'10km/h Lactate',p10:'10km/h HR',l11:'11km/h Lactate',p11:'11km/h HR',l12:'12km/h Lactate',p12:'12km/h HR',l13:'13km/h Lactate',p13:'13km/h HR'}},
-  test:   {tab:'Tests',     cols:{date:'Date',phase:'Phase (deload)',test:'Test',result:'Result',unit:'Unit',hr:'Avg HR (bpm)',vo2:'VO2max',watt:'Avg watt',damper:'Damper',drag:'Drag factor'}},
+  test:   {tab:'Tests',     cols:{date:'Date',phase:'Phase (deload)',test:'Test',result:'Result',unit:'Unit',hr:'Avg HR (bpm)',vo2:'VO2max',watt:'Avg watt',damper:'Damper',drag:'Drag factor',split:'Zone split',effort:'Effort (1-10)',splits:'Interval splits',maxhr:'Max HR',spm:'Avg SPM'}},
   vo2:    {tab:'VO2',       cols:{date:'Date',structure:'Structure',pace:'Interval pace /km',dist:'Total distance (km)',time:'Total time (min)',hr:'Avg HR',split:'Zone split'}},
+  // TESTET RAKNADES ALDRIG I MOTORN — `Tests` var ingen motorkalla alls, sa 2K:t
+  // 8 sep bidrog noll minuter trots att 84 % av det lag i Z5. Splitten kommer ur
+  // ErgData och tacker passet, inte uppvarmningen (master §9).
+  hybx:   {tab:'HybridX',   cols:{date:'Date',div:'Division',total:'Total',hr:'Avg HR',split:'Zone split',effort:'Effort (1-10)'}},
   cls:    {tab:'Joker',     cols:{date:'Date',name:'Session',time:'Time (min)',bpm:'Avg HR',split:'Zone split'}},
   field:  {tab:'Field',     cols:{st:'Station',w:'Weight vs Open',n:'n',upd:'Updated'},
            also:['p25','median','p75','p25_ms','median_ms','p75_ms','sub110 n','sub110 median','sub110_ms','podium n','podium median','podium_ms'],
@@ -713,8 +717,19 @@ function zoneMins(cut){
   // Inga fallbacks langre — inte snittpuls pa lop/BikeErg, inte prescription-Z4 pa
   // troskel. Fallbackarna lade HELA passet i EN zon: 16,6 av kortets 19,0 Z1-timmar
   // var uppskattade, inte matta. Motorn visar nu bara det klockan/erg-appen loggat.
+  // MOTORKALLORNA HARLEDS UR `MAP` — DE RAKNAS INTE UPP HAR (build 3.28).
+  // Listan var hardkodad, och `MAP` var det andra stallet samma fakta stod pa.
+  // Nar `Tests` blev en kalla 8 sep racker det inte att deklarera kolumnerna:
+  // 2K:t hade fortsatt bidra noll minuter till motorn trots en loggad zonsplit,
+  // och ingenting hade sagt till — kortet visar bara timmar, aldrig vilka flikar
+  // det last. Samma familj som `threshold_modalities` 27 aug: NAR ETT URVAL HAR
+  // TVA KONSUMENTER HOR DET HEMMA I KALLAN. En kalla med `split` i sin `cols`
+  // AR en motorkalla; det gar darmed inte langre att lagga till en och glomma
+  // halva ledningen.
   var z=[0,0,0,0,0,0], skipped=0;
-  [D.run,D.bike,D.thr,D.vo2,D.cls,D.hyrox,D.ron].forEach(function(arr){
+  Object.keys(MAP).filter(function(k){
+    return MAP[k].cols && MAP[k].cols.split === 'Zone split';
+  }).map(function(k){ return D[k]; }).forEach(function(arr){
     fdate(arr||[],cut).forEach(function(r){
       var sp=parseSplit(r.split);
       if(sp){ for(var i=1;i<=5;i++) z[i]+=sp[i]; } else { skipped++; }
