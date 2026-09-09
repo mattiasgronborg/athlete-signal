@@ -185,7 +185,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 // for Mattias och coach Ulrik — och ingen av dem bygger dashboarden. Vad som
 // andrades hor hemma i handoffen, keyat pa numret. Den 29 aug stod hela
 // pass C:s andringslogg har: "omdesign: en kortfabrik med rubrik + chip ...".
-var BUILD="3.29 · 2026-09-09";
+var BUILD="3.30 · 2026-09-09";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -408,11 +408,11 @@ var CONFIG = {"races": [["2026-12-11", "Stockholm"], ["2027-03-25", "Copenhagen"
 // MAP är ENDA källan för både adapt() och kolumnkontrollen. En kolumn som inte
 // står här läses inte av något kort; en kolumn som står här MÅSTE finnas i
 // payloaden, annars ritas ett rött varningskort i stället för ett tomt kort.
-var EXPECT_SCHEMA = 16;
+var EXPECT_SCHEMA = 17;
 var MAP = {
   run:    {tab:'Running',   cols:{date:'Date',dist:'Distance (km)',time:'Time (min)',cad:'Cadence (spm)',zone:'Zone',hr:'Avg HR (bpm)',split:'Zone split'}},
   bike:   {tab:'BikeErg',      cols:{date:'Date',time:'Time (min)',dist:'Distance (km)',bpm:'Avg HR',watt:'Avg watt',zone:'Zone',type:'Type',split:'Zone split',damper:'Damper',drag:'Drag factor'}},
-  thr:    {tab:'Threshold', cols:{date:'Date',type:'Type',ints:'Intervals',len:'Length (min/int)',meters:'Total meters',pace:'Avg /500m',pacekm:'Pace /km',watt:'Avg watt',bpm:'Avg HR',split:'Zone split',damper:'Damper',drag:'Drag factor',incline:'Incline (%)',splits:'Interval splits',effort:'Effort (1-10)',cad:'Cadence (spm)'}},
+  thr:    {tab:'Threshold', cols:{date:'Date',type:'Type',ints:'Intervals',len:'Length (min/int)',meters:'Total meters',pace:'Avg /500m',pacekm:'Pace /km',watt:'Avg watt',bpm:'Avg HR',split:'Zone split',damper:'Damper',drag:'Drag factor',incline:'Incline (%)',splits:'Interval splits',cad:'Cadence (spm)'}},
   str:    {tab:'Strength',  cols:{date:'Date',dl:'Deadlift (kg)',dlr:'DL reps',fs:'Front squat (kg)',fsr:'FS reps',pr:'Strict press (kg)',prr:'SP reps',bg:'Bulgarian (kg/h)',bgr:'BS reps/leg',bl:'Back lunge (kg/h)',blr:'BL reps/leg',lc:'Leg curl (kg/ben)',lcr:'LC reps',le:'Leg ext (kg/ben)',ler:'LE reps'}},
   hyrox:  {tab:'Hyrox',     cols:{date:'Date',push:'Sled push (kg)',lunge:'Lunges (kg)',pull:'Sled pull (kg)',farm:'Farmers (kg/hand)',vest:'Vest (kg)',len:'Session length (min)',split:'Zone split',wb:'Wall balls (kg)',bur:'Burpee broad jump (m)',rounds:'Rounds (B1·B2·B3)',wbr:'WB reps/round',variant:'Variant'}},
   ron:    {tab:'Roncevic',  cols:{date:'Date',wave:'Wave',wb:'WB weight (kg)',v1:'Round 1 (s)',v2:'Round 2 (s)',v3:'Round 3 (s)',v4:'Round 4 (s)',badge:'Badge WB',split:'Zone split'}},
@@ -420,12 +420,12 @@ var MAP = {
   weight: {tab:'Weight',    cols:{date:'Date',kg:'Weight (kg)'}},
   grip:   {tab:'Grip',      cols:{date:'Date',r:'Right (kg)',l:'Left (kg)'}},
   lifelab:{tab:'LifeLab',   cols:{date:'Test date',comment:'Comment',l10:'10km/h Lactate',p10:'10km/h HR',l11:'11km/h Lactate',p11:'11km/h HR',l12:'12km/h Lactate',p12:'12km/h HR',l13:'13km/h Lactate',p13:'13km/h HR'}},
-  test:   {tab:'Tests',     cols:{date:'Date',phase:'Phase (deload)',test:'Test',result:'Result',unit:'Unit',hr:'Avg HR (bpm)',vo2:'VO2max',watt:'Avg watt',damper:'Damper',drag:'Drag factor',split:'Zone split',effort:'Effort (1-10)',splits:'Interval splits',maxhr:'Max HR',spm:'Avg SPM',iwatt:'Interval watt',ispm:'Interval SPM'}},
+  test:   {tab:'Tests',     cols:{date:'Date',phase:'Phase (deload)',test:'Test',result:'Result',unit:'Unit',hr:'Avg HR (bpm)',vo2:'VO2max',watt:'Avg watt',damper:'Damper',drag:'Drag factor',split:'Zone split',splits:'Interval splits',maxhr:'Max HR',spm:'Avg SPM',iwatt:'Interval watt',ispm:'Interval SPM'}},
   vo2:    {tab:'VO2',       cols:{date:'Date',structure:'Structure',pace:'Interval pace /km',dist:'Total distance (km)',time:'Total time (min)',hr:'Avg HR',split:'Zone split'}},
   // TESTET RAKNADES ALDRIG I MOTORN — `Tests` var ingen motorkalla alls, sa 2K:t
   // 8 sep bidrog noll minuter trots att 84 % av det lag i Z5. Splitten kommer ur
   // ErgData och tacker passet, inte uppvarmningen (master §9).
-  hybx:   {tab:'HybridX',   cols:{date:'Date',div:'Division',total:'Total',hr:'Avg HR',split:'Zone split',effort:'Effort (1-10)'}},
+  hybx:   {tab:'HybridX',   cols:{date:'Date',div:'Division',total:'Total',hr:'Avg HR',split:'Zone split'}},
   cls:    {tab:'Joker',     cols:{date:'Date',name:'Session',time:'Time (min)',bpm:'Avg HR',split:'Zone split'}},
   field:  {tab:'Field',     cols:{st:'Station',w:'Weight vs Open',n:'n',upd:'Updated'},
            also:['p25','median','p75','p25_ms','median_ms','p75_ms','sub110 n','sub110 median','sub110_ms','podium n','podium median','podium_ms'],
@@ -934,7 +934,7 @@ function renderTrends(w){var c=cut(w);
      :(nb?('Not trained in this block · starts '+wdate(nb[0])):'Not in the plan right now');
    return panel('eng','Threshold '+M.label+' — pace at cost', sub,
      '<div class="na">No '+M.label+' threshold logged yet</div>'
-     +'<div class="foot-note">Log '+need+' · interval splits · effort · avg HR · zone split — the card fills itself, nothing to build.</div>');
+     +'<div class="foot-note">Log '+need+' · interval splits · avg HR · zone split — the card fills itself, nothing to build.</div>');
  }
  // BADA TROSKELMODALITETERNA HAR ALLTID EN PLATS. Master §6: "Trosk el kors pa ski
  // OCH lopning" — och "LOPNINGEN VAGER TYNGST … prioritera aldrig ski over lopning
@@ -959,7 +959,7 @@ function renderTrends(w){var c=cut(w);
  }
  var uncal=[];
  var bandBody=thrB.length?thrB.map(function(b){
-   var sp=spreadOf(b.last),bd=bandOf(b.key),ef=num(b.last.effort);
+   var sp=spreadOf(b.last),bd=bandOf(b.key);
    var head;
    if(bd&&sp){
      var inB=sp.vals.filter(function(v){return v>=bd.lo&&v<=bd.hi;}).length;
@@ -972,18 +972,18 @@ function renderTrends(w){var c=cut(w);
    if(!bd)uncal.push(b.M.label);
    var notes=[];
    if(bd&&sp)notes.push('Spread '+mmss(sp.range)+' across '+sp.n+' intervals'+(sp.pct!=null?' · '+sp.pct.toFixed(1)+'%':''));
-   // EFFORT 9-10 AR EN VARNING, ALDRIG EN BRAGD (master §6): da lag bandet for
-   // hogt och passet blev ett maxtest i troskelns klader. Saknas effort sags det —
-   // utan den gar kvalitetskontrollen inte att kora.
-   if(ef==null)notes.push('<span class="nain">effort not logged — the band check cannot run</span>');
-   else if(ef>=9)notes.push('<b style="color:var(--warn)">Effort '+ef+'/10 — run as a test, not as threshold work</b>');
-   else notes.push('Effort '+ef+'/10');
+   // EFFORT AR AVSKAFFAT (beslut 9 sep 2026). Kortet vilar nu HELT pa matta tal:
+   // holls bandet, och hur stor var spridningen — vilket ocksa ar det master §6
+   // kallar kvaliteten. Effort var en proxy sa lange malbanden inte var satta.
+   // SAG NAR BANDET SAKNAS: utan kalibrerat band gar "holls bandet" inte att
+   // besvara, och da ska kortet saga det rakt ut i stallet for att visa
+   // spridningen som om den vore hela domen.
+   if(!bd)notes.push('<span class="nain">band not calibrated — only the spread can be read</span>');
    var read=[];
    var pv=psec(b.last[b.M.pace]); if(pv!=null)read.push(mmss(pv)+' '+b.M.unit);
    var mv=num(b.last.meters); if(mv!=null)read.push(fmtN(mv)+' m');
    var wv=num(b.last.watt); if(wv!=null)read.push(Math.round(wv)+' W');
-   return '<div style="margin-bottom:14px"><div class="kv"><span class="kvl">'+b.M.label+' · '+b.struct+'</span>'
-     +(ef!=null&&ef>=9?'<span class="bdelta warn">effort '+ef+'/10</span>':'')+'</div>'
+   return '<div style="margin-bottom:14px"><div class="kv"><span class="kvl">'+b.M.label+' · '+b.struct+'</span></div>'
      +head
      +(notes.length?'<div class="foot-note">'+notes.join(' · ')+'</div>':'')
      +'<div class="foot-note">'+ctrlTag(b)+(read.length?' · '+read.join(' · ')+' — a readout, never the target':'')+'</div></div>';
