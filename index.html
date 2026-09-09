@@ -185,7 +185,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 // for Mattias och coach Ulrik — och ingen av dem bygger dashboarden. Vad som
 // andrades hor hemma i handoffen, keyat pa numret. Den 29 aug stod hela
 // pass C:s andringslogg har: "omdesign: en kortfabrik med rubrik + chip ...".
-var BUILD="3.30 · 2026-09-09";
+var BUILD="3.31 · 2026-09-09";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -901,7 +901,9 @@ function renderTrends(w){var c=cut(w);
  }
  // BANDET HALLS, JAGAS ALDRIG. Malbanden ar INTE satta — ett kalibreringspass per
  // modalitet skriver in dem i master. Tills dess sags det rakt ut.
- function bandOf(k){var b=(cfg.bands||{})[k];return (b&&b.lo&&b.hi&&psec(b.lo)!=null&&psec(b.hi)!=null)?{lo:psec(b.lo),hi:psec(b.hi),txt:b.lo+'–'+b.hi}:null;}
+ // bandOf() ar struken 9 sep 2026: det finns inget malband i pace eller watt.
+ // Zonen ar PULSEN, farten ar utfallet — och utfallet ska flytta sig nar formen
+ // gor det. Ett last fartband hade gjort utveckling till ett regelbrott (master §6).
  var thrAll=thrBlocks();
  var thrB=thrAll.filter(function(b){return b.inPlan;});
  // EN MODALITET SOM PLANEN KRAVER MEN SOM SAKNAR RADER ar inte "ingenting" —
@@ -957,28 +959,27 @@ function renderTrends(w){var c=cut(w);
      return b?paceCard(b):waitCard(m,plan.indexOf(m)>=0);
    });
  }
- var uncal=[];
  var bandBody=thrB.length?thrB.map(function(b){
-   var sp=spreadOf(b.last),bd=bandOf(b.key);
+   var sp=spreadOf(b.last);
+   // INGET MALBAND I PACE ELLER WATT (beslut 9 sep 2026, master §6). Zonen ar
+   // PULSEN; farten ar utfallet och ska flytta sig nar formen gor det. Ett last
+   // fartband hade gjort utveckling till ett regelbrott — kortet mater darfor
+   // spridningen, och pace lases mot pulsen i kortet *pace at cost*.
    var head;
-   if(bd&&sp){
-     var inB=sp.vals.filter(function(v){return v>=bd.lo&&v<=bd.hi;}).length;
-     head='<div class="kvv">'+inB+' / '+sp.n+'<small> intervals in band '+bd.txt+' '+b.M.unit+'</small></div>';
-   } else if(sp){
+   if(sp){
      head='<div class="kvv">'+mmss(sp.range)+'<small> spread across '+sp.n+' intervals'+(sp.pct!=null?' · '+sp.pct.toFixed(1)+'%':'')+'</small></div>';
    } else {
      head='<div class="na">Interval splits not logged — the spread cannot be measured</div>';
    }
-   if(!bd)uncal.push(b.M.label);
    var notes=[];
-   if(bd&&sp)notes.push('Spread '+mmss(sp.range)+' across '+sp.n+' intervals'+(sp.pct!=null?' · '+sp.pct.toFixed(1)+'%':''));
+   if(sp)notes.push('Spread '+mmss(sp.range)+' across '+sp.n+' intervals'+(sp.pct!=null?' · '+sp.pct.toFixed(1)+'%':''));
    // EFFORT AR AVSKAFFAT (beslut 9 sep 2026). Kortet vilar nu HELT pa matta tal:
    // holls bandet, och hur stor var spridningen — vilket ocksa ar det master §6
    // kallar kvaliteten. Effort var en proxy sa lange malbanden inte var satta.
    // SAG NAR BANDET SAKNAS: utan kalibrerat band gar "holls bandet" inte att
    // besvara, och da ska kortet saga det rakt ut i stallet for att visa
    // spridningen som om den vore hela domen.
-   if(!bd)notes.push('<span class="nain">band not calibrated — only the spread can be read</span>');
+
    var read=[];
    var pv=psec(b.last[b.M.pace]); if(pv!=null)read.push(mmss(pv)+' '+b.M.unit);
    var mv=num(b.last.meters); if(mv!=null)read.push(fmtN(mv)+' m');
@@ -990,8 +991,6 @@ function renderTrends(w){var c=cut(w);
  }).join(''):'<div class="na">No '+((planMods()||[]).join(' · ')||'threshold')+' session logged in this block yet — the band check runs on the first one.</div>';
  // Skalet sags EN gang per kort, inte en gang per modalitet: tre identiska rader
  // om samma sak laser man forbi, och da forsvinner det som faktiskt star dar.
- if(uncal.length)bandBody+='<div class="foot-note">Band not calibrated for '+uncal.join(' · ')
-   +' — the spread is the signal until one calibration session per modality writes the band into master.</div>';
  // MASTER §6: "Trosk el kors pa ski och lopning. INGET ANNAT." Rodd ar aldrig ett
  // troskelstimulus — den lever som lins 2-test (2K pa standarddeload). Alltsa
  // renderas den inte har: inget kort, ingen rad, ingen fotnot.
@@ -1003,7 +1002,7 @@ function renderTrends(w){var c=cut(w);
  // utan att en kodrad ror sig.
 
 var _zm=zoneMins(c);var _zt=_zm.reduce(function(a,b){return a+b;},0)||1;var _z24=Math.round((_zm[2]+_zm[4])/_zt*100);var zoneBody=zoneWidget(_zm)+'<div class="foot-note">'+(_zt>1?((_zt/60).toFixed(1)+' h from logged zone splits'):'No zone split logged yet')+(_zm.skipped?(' · '+_zm.skipped+' session'+(_zm.skipped===1?'':'s')+' without split — not counted'):' · every session has a split')+'</div>';document.getElementById('lens3eng').innerHTML=planCards().concat([
- panel('eng','Threshold — band adherence','Held the band · spread between intervals · metres are a readout',bandBody),
+ panel('eng','Threshold — spread between intervals','Evenness across the intervals · pace is read against heart rate, never against a target',bandBody),
   mpanel('eng','Roncevic total','Race-sim · training side · vs your best',mmss((last(rt)||{}).v),chipBest(rt,true),rt,bestOf(rt,true),null,'Roncevic race-sim total — training data, never compared to race goals.'),
   (function(){var vp=fdate(D.vo2||[],c).filter(function(x){return psec(x.pace)!=null;}).map(function(x){return P(psec(x.pace),mmss(psec(x.pace))+' /km',x.date);});
    if(vp.length)return panel('eng','VO2 / intervals — pace','Z5–6 · lower is faster',bigspark(vp,true,'VO2 interval pace per km — lower is faster.'));
@@ -1418,14 +1417,7 @@ function selftest(raw){
     if(!xs||xs.length!==3) return 'splitList gav '+JSON.stringify(xs);
     var range=Math.max.apply(0,xs)-Math.min.apply(0,xs);
     if(Math.abs(range-1.8)>0.01) return 'spridningen blev '+range.toFixed(2)+' s, väntade 1.80';
-    var inB=xs.filter(function(v){return v>=psec('1:55')&&v<=psec('1:56.5');}).length;
-    return inB===2 ? {ok:true, note:'spridning 1.80 s · 2/3 i bandet 1:55–1:56.5'}
-                   : {ok:false, note:inB+'/3 i bandet'}; });
-  t('Satta målband har både lo och hi', function(){
-    var b=CONFIG.bands||{}, set=Object.keys(b).filter(function(k){return b[k];});
-    var half=set.filter(function(k){return !(b[k].lo&&b[k].hi);});
-    return half.length ? {ok:false, note:'halvt band: '+half.join(', ')}
-      : {ok:true, note:set.length?('kalibrerade: '+set.join(', ')):'inga band satta än — kortet säger det i klartext'}; });
+    return {ok:true, note:'spridning 1.80 s over tre intervall'}; });
   t('Testschemat kommer ur CONFIG, inte ur koden', function(){
     var tw=(CONFIG.phases||[]).filter(function(p){return /test/.test(p[3]);});
     var utan=tw.filter(function(p){return !p[4];}).map(function(p){return p[2];});
@@ -1447,10 +1439,8 @@ function selftest(raw){
     var bad=[];
     (CONFIG.threshold_plan||[]).forEach(function(b){(b[2]||[]).forEach(function(m){
       if(mods.indexOf(m)<0&&bad.indexOf(m)<0)bad.push(m);});});
-    Object.keys(CONFIG.bands||{}).forEach(function(k){
-      if(mods.indexOf(k)<0&&bad.indexOf(k)<0)bad.push(k);});
     return bad.length ? {ok:false, note:'utanför threshold_modalities: '+bad.join(', ')}
-      : {ok:true, note:mods.join(' · ')+' — plan och band håller sig innanför'}; });
+      : {ok:true, note:mods.join(' · ')+' — planen håller sig innanför'}; });
   t('Veckoetiketten pekar på rätt fas', function(){
     // wkIsDL fick veckans måndag via toISOString() och läste därför HELA veckan en
     // dag för tidigt — W34 (Build) fick "deload wk" från W33. Påståendet är att
