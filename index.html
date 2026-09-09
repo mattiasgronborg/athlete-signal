@@ -185,7 +185,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 // for Mattias och coach Ulrik — och ingen av dem bygger dashboarden. Vad som
 // andrades hor hemma i handoffen, keyat pa numret. Den 29 aug stod hela
 // pass C:s andringslogg har: "omdesign: en kortfabrik med rubrik + chip ...".
-var BUILD="3.31 · 2026-09-09";
+var BUILD="3.32 · 2026-09-09";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -408,7 +408,7 @@ var CONFIG = {"races": [["2026-12-11", "Stockholm"], ["2027-03-25", "Copenhagen"
 // MAP är ENDA källan för både adapt() och kolumnkontrollen. En kolumn som inte
 // står här läses inte av något kort; en kolumn som står här MÅSTE finnas i
 // payloaden, annars ritas ett rött varningskort i stället för ett tomt kort.
-var EXPECT_SCHEMA = 17;
+var EXPECT_SCHEMA = 18;
 var MAP = {
   run:    {tab:'Running',   cols:{date:'Date',dist:'Distance (km)',time:'Time (min)',cad:'Cadence (spm)',zone:'Zone',hr:'Avg HR (bpm)',split:'Zone split'}},
   bike:   {tab:'BikeErg',      cols:{date:'Date',time:'Time (min)',dist:'Distance (km)',bpm:'Avg HR',watt:'Avg watt',zone:'Zone',type:'Type',split:'Zone split',damper:'Damper',drag:'Drag factor'}},
