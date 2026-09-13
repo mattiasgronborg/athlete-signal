@@ -112,6 +112,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 .kvl{font-size:var(--fs-xs);color:var(--mut);text-transform:uppercase;letter-spacing:.04em;min-width:0}
 .kvv{font-size:var(--fs-lg);font-weight:800;line-height:1.15}.kvv small{font-size:var(--fs-xs);color:var(--mut);font-weight:600;margin-left:2px}
 .foot-note{font-size:var(--fs-xs);color:var(--mut);margin-top:3px;line-height:1.5}
+.foot-note .bdelta{white-space:normal}
 .twocol{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4)}.twocol>*{min-width:0}
 @media(max-width:860px){.twocol{grid-template-columns:1fr}}
 .prog .pctl{flex-wrap:wrap}.prog .bdelta{flex-shrink:0}
@@ -169,7 +170,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 <h2 class="sl">This week — following the plan <span class="q">The lamps</span></h2>
 <div id="wkslot"><div id="wtype" style="margin-bottom:9px;font-size:var(--fs-xs);color:var(--mut)"></div><div class="lamps" id="lamps"></div><div id="z2wk" style="margin-top:11px"></div><div class="rules" id="rules"></div></div>
 <h2 class="sl">Body — recovery <span class="q">Behind the morning signal</span></h2><div class="grid three" id="body"></div>
-<h2 class="sl">Lens 3 · Key sessions — direction <span class="q">Every logged session · noisy, read as direction — not a weekly snapshot</span></h2>
+<h2 class="sl">Lens 3 · Key sessions — direction <span class="q">Every logged session</span></h2>
 <h3 style="font-size:var(--fs-sm);color:var(--acc);margin:4px 0 8px">Engine — threshold &amp; race-sim</h3><div class="grid three" id="lens3eng"></div>
 <h3 style="font-size:var(--fs-sm);color:var(--acc2);margin:18px 0 8px">Chassis — strength &amp; stations</h3><div class="grid three" id="chassis"></div>
 <h2 class="sl">Base &amp; engine volume <span class="q">Monitoring — not a lens, just the work</span></h2><div class="grid three" id="engine"></div>
@@ -185,7 +186,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 // for Mattias och coach Ulrik — och ingen av dem bygger dashboarden. Vad som
 // andrades hor hemma i handoffen, keyat pa numret. Den 29 aug stod hela
 // pass C:s andringslogg har: "omdesign: en kortfabrik med rubrik + chip ...".
-var BUILD="3.32 · 2026-09-09";
+var BUILD="3.33 · 2026-09-13";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -277,9 +278,9 @@ function thrKm(t){
 // `pace` ar MAP-nyckeln for modalitetens pace-kolumn, `ctrl` dess kontrollvariabel:
 // ski/rodd styrs av drag factor, lopning av lutningen (master §6).
 var THR_MODES = {
-  Ski: {label:'Ski', pace:'pace',   unit:'/500m', ctrl:'drag',    ctrlTxt:function(v){return 'drag '+v;}},
-  Row: {label:'Row', pace:'pace',   unit:'/500m', ctrl:'drag',    ctrlTxt:function(v){return 'drag '+v;}},
-  Run: {label:'Run', pace:'pacekm', unit:'/km',   ctrl:'incline', ctrlTxt:function(v){return v+'% incline';}}
+  Ski: {label:'Ski', pace:'pace',   unit:'/500m', ctrl:'drag',    ef:'watt', efUnit:'W per heartbeat',     ctrlTxt:function(v){return 'drag '+v;}, ctrlDiffTxt:function(a,p){return 'drag '+a+' vs '+p;}},
+  Row: {label:'Row', pace:'pace',   unit:'/500m', ctrl:'drag',    ef:'watt', efUnit:'W per heartbeat',     ctrlTxt:function(v){return 'drag '+v;}, ctrlDiffTxt:function(a,p){return 'drag '+a+' vs '+p;}},
+  Run: {label:'Run', pace:'pacekm', unit:'/km',   ctrl:'incline', ef:'pace', efUnit:'m/min per heartbeat', ctrlTxt:function(v){return v+'% incline';}, ctrlDiffTxt:function(a,p){return a+'% vs '+p+'% incline';}}
 };
 // Vakten over modaliteterna. ENUMS slapper igenom ett `Type` som koden kanner —
 // men ett varde utan rendering forsvinner anda TYST ur korten. Samma monster som
@@ -296,12 +297,21 @@ function splitList(v){
           .filter(function(x){return x!=null;});
   return xs.length?xs:null;
 }
-// DOMEN: pace OCH puls tillsammans. Master's definition av framsteg ar "samma
-// fart till lagre puls" — alltsa maste kostnaden alltid med. Saknas puls pa
-// nagon av de tva passen sags DET; en halv jamforelse ar ingen jamforelse.
-// Snittpulsen pa ett troskelpass innehaller uppvarmning och vila. Den ar darfor
-// bara jamforbar mot ett pass med SAMMA struktur — vilket ar precis det urval
-// `comp` gor.
+// OUTPUT PER HJARTSLAG — troskelns matvarde (master §6, beslut Mattias 13 sep 2026).
+// Den PARVISA domen mot forra passet ar overgiven. Den kravde komplett data pa
+// BADA passen och dog nar EN punkt saknades: kortet stod pa "cost unknown" i fyra
+// veckor for att ett FOREGAENDE pass saknade snittpuls. Talet trendas i stallet,
+// ett skalart varde per pass.
+//   Ski (och varje erg): Avg watt / Avg HR       -> W per hjartslag
+//   Lopning: (60000 / pace i sek/km) / Avg HR    -> m/min per hjartslag
+// HOGRE AR BATTRE PA BADA. Lopningen vands med flit: pace ar sek/km dar lagre ar
+// battre, och tva kort som pekar at olika hall vid samma framsteg ar tva kort
+// ingen laser ratt.
+// GILTIGHETSGRANSEN SAGS I MASTER, INTE PA KORTET: EF ar forankrad i steady state,
+// 3x10 ligger i granslandet och 5x6 gor det inte, sa talet raknas pa HELA passets
+// snittwatt och snittpuls. EF per intervall kraver puls per intervall — ett falt
+// som inte finns.
+// SAKNAS SNITTPULS hoppas passet over i serien: ett hal i kurvan, aldrig ett dott kort.
 // DOMEN BOR PA ETT STALLE (§8g). Master §6: "framsteg = samma fart till LAGRE
 // puls" — samma dom galler cykelns watt. Tva kopior driver isar.
 // `dOut` ar vand sa POSITIVT = battre; `tol` ar brusgransen i outputens enhet.
@@ -317,25 +327,11 @@ function costGrade_(dOut,dHr,tol){
   if(dearer)          return 'same+dearer';
   return 'same';
 }
-function costVerdict(b){
-  if(!b.prev) return {cls:'acc', txt:'first on this structure'};
-  var p1=psec(b.last[b.M.pace]), p0=psec(b.prev[b.M.pace]);
-  var h1=num(b.last.bpm), h0=num(b.prev.bpm);
-  if(p1==null||p0==null) return {cls:'', txt:'pace missing'};
-  if(h1==null||h0==null) return {cls:'', txt:'cost unknown',
-    why:'Avg HR missing on '+(h1==null?'this':'the previous')+' session — pace alone cannot say whether it got cheaper'};
-  var dp=p1-p0, dh=h1-h0;
-  // Pace: LAGRE ar battre. Outputen vands darfor innan den gar in i tabellen.
-  var W={'better+cheaper':['good','faster at lower cost'],
-         'better+dearer' :['acc', 'faster, paid for'],
-         'better'        :['good','faster, same cost'],
-         'worse+cheaper' :['',    'easier, slower'],
-         'worse'         :['warn','slower'],
-         'same+cheaper'  :['good','same pace, lower cost'],
-         'same+dearer'   :['warn','same pace, higher cost'],
-         'same'          :['',    'unchanged']}[costGrade_(-dp,dh,p0*0.01)];
-  return {cls:W[0], txt:W[1],
-    delta:(dp<0?'−':'+')+mmss(Math.abs(dp))+' · '+(dh<0?'−':'+')+Math.abs(Math.round(dh))+' bpm'};
+function efOf(M,t){
+  if(!M||!t) return null;
+  var h=num(t.bpm); if(h==null||h<=0) return null;
+  if(M.ef==='watt'){ var w=num(t.watt); return (w==null||w<=0)?null:w/h; }
+  var p=psec(t[M.pace]); return (p==null||p<=0)?null:(60000/p)/h;
 }
 // CYKELNS SIDA AV SAMMA DOM (§8g). Watt ar erg-passets matvarde, puls dess
 // kostnad. Kortet het forr "At fixed easy HR" — pulsen ar INTE fast, sa det
@@ -379,6 +375,28 @@ function spreadOf(t){
   return {n:xs.length,min:mn,max:mx,range:mx-mn,mean:mean,pct:mean?(mx-mn)/mean*100:null,vals:xs};
 }
 
+// ETT TOMT TILLSTAND AR EN KORTTYP, INTE EN SLUMPFORMULERING (13 sep 2026).
+// Atta olika formuleringar sa samma sak pa atta satt — "Awaiting", "Awaiting W37",
+// "No data yet", "trend after 2 logs", "Field data pending" — och INGEN av dem sa
+// nar kortet fylls. Tre slots, en fabrik:
+//   will  vad kortet kommer visa
+//   when  nar det fylls — ett DATUM, aldrig ett internt vecko-id
+//   todo  vad lasaren kan gora (valfri, utelamnas om inget)
+// Markoren data-empty ar kortfabrikens egen: den kraver att kortet ocksa bar ett
+// data-why, sa ett tomt kort aldrig blir sin egen forklaring.
+function emptyState(will,when,todo){
+  return '<div class="na" data-empty="1">'+will+'</div>'
+    +'<div class="foot-note">'+(when||'no date set')+(todo?' · '+todo:'')+'</div>';
+}
+// TESTPLANEN BOR I CONFIG.phases (femte elementet), ALDRIG I ETT VECKO-ID I KODEN.
+// Vecko-id:t ar ett INTERNT handtag: "Awaiting W37" sa ingenting for lasaren, och
+// W37 var veckan som just gatt. Flyttas en testvecka rors ingen kodrad.
+var LENS2_TESTS=[['2K Ski',/2\s*k.*ski|ski.*2\s*k/i,true],['2K Row',/2\s*k.*(row|rodd)|(row|rodd).*2\s*k/i,true],['FTP Bike',/ftp/i,false],['5K Run',/5\s*k.*(run|löp)|(run|löp).*5\s*k/i,true]];
+function nextTest(phases,rx,today){
+  var td=today||ymd(new Date());
+  return (phases||[]).filter(function(p){return /test/.test(p[3])&&rx.test(String(p[4]||''))&&p[1]>=td;})
+    .sort(function(a,b){return a[0]<b[0]?-1:1;})[0]||null;
+}
 function last(a){return a.length?a[a.length-1]:null;}
 function P(v,d,t){return v==null?null:{v:v,d:d,t:t};}
 function deriveWave(ds){var d=pd(ds);var p=cfg.phases.find(function(x){return d>=pd(x[0])&&d<=pd(x[1]);});if(!p)return '?';if(/Deload|Taper/.test(p[3]))return 'DL';var idx=Math.floor((d-pd(p[0]))/(7*DAY));return 'w'+Math.min(3,idx+1);}
@@ -403,7 +421,7 @@ function spark(series,lower,cls,desc){series=(series||[]).map(function(o){return
       +' to '+String(series[series.length-1].d).replace(/"/g,'')+'" viewBox="0 0 100 '+h+'" preserveAspectRatio="none"><polyline points="'+poly+'" fill="none" stroke="'+c+'" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>'+dots+hit+'</svg>';}
 function arrow(vals,lower){vals=(vals||[]).map(function(o){return o&&typeof o==='object'?o.v:o;}).filter(function(v){return v!=null;});if(vals.length<2)return '';var imp=vals[vals.length-1]>vals[0];if(lower)imp=!imp;return '<span class="tr" style="color:'+(imp?'var(--good)':'var(--warn)')+'">'+(imp?'▲':'▼')+'</span>';}
 
-var CONFIG = {"races": [["2026-12-11", "Stockholm"], ["2027-03-25", "Copenhagen"], ["2027-04-16", "Helsinki"]], "phases": [["2026-07-13", "2026-07-19", "W29", "Deload"], ["2026-07-20", "2026-08-09", "W30-32", "Build"], ["2026-08-10", "2026-08-16", "W33", "Deload"], ["2026-08-17", "2026-09-06", "W34-36", "Build"], ["2026-09-07", "2026-09-13", "W37", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-09-14", "2026-10-04", "W38-40", "Build"], ["2026-10-05", "2026-10-11", "W41", "Deload+test", "FTP Bike (Tue) + 5K Run (Thu) · quarterly"], ["2026-10-12", "2026-11-01", "W42-44", "Build"], ["2026-11-02", "2026-11-08", "W45", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-11-09", "2026-11-29", "W46-48", "Build"], ["2026-11-30", "2026-12-11", "W49-50", "Taper"]], "goals": {"dl": 130, "fs": 80, "pr": 25, "bl": 25, "bg": 22.5, "cad": 170, "wb": 100, "wb_pr": 62, "volume": 55}, "threshold_modalities": ["Run", "Ski"], "bands": {"Ski": null, "Run": null}, "threshold_plan": [["2026-08-17", "2026-09-06", ["Ski"]], ["2026-09-14", "2026-09-20", ["Run"]], ["2026-09-21", "2026-09-27", ["Ski"]], ["2026-09-28", "2026-10-04", ["Run"]], ["2026-10-12", "2026-11-01", ["Run"]], ["2026-11-09", "2026-11-29", ["Run"]]], "rhr_base": 40}; // plan data only — no health data in the public file
+var CONFIG = {"races": [["2026-09-05", "HybridX · Stockholm"], ["2026-12-11", "Hyrox · Stockholm"], ["2027-03-25", "Hyrox · Copenhagen"], ["2027-04-16", "Hyrox · Helsinki"]], "phases": [["2026-07-13", "2026-07-19", "W29", "Deload"], ["2026-07-20", "2026-08-09", "W30-32", "Build"], ["2026-08-10", "2026-08-16", "W33", "Deload"], ["2026-08-17", "2026-09-06", "W34-36", "Build"], ["2026-09-07", "2026-09-13", "W37", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-09-14", "2026-10-04", "W38-40", "Build"], ["2026-10-05", "2026-10-11", "W41", "Deload+test", "FTP Bike (Tue) + 5K Run (Thu) · quarterly"], ["2026-10-12", "2026-11-01", "W42-44", "Build"], ["2026-11-02", "2026-11-08", "W45", "Deload+test", "2K Ski (Tue) + 2K Row (Thu)"], ["2026-11-09", "2026-11-29", "W46-48", "Build"], ["2026-11-30", "2026-12-11", "W49-50", "Taper"]], "goals": {"dl": 130, "fs": 80, "pr": 25, "bl": 25, "bg": 22.5, "cad": 170, "wb": 100, "wb_pr": 62, "volume": 55}, "threshold_modalities": ["Run", "Ski"], "threshold_plan": [["2026-08-17", "2026-09-06", ["Ski"]], ["2026-09-14", "2026-09-20", ["Run"]], ["2026-09-21", "2026-09-27", ["Ski"]], ["2026-09-28", "2026-10-04", ["Run"]], ["2026-10-12", "2026-11-01", ["Run"]], ["2026-11-09", "2026-11-29", ["Run"]]], "rhr_base": 40}; // plan data only — no health data in the public file
 // ═══ Datakontrakt mot arket (22 aug, schema v9) ═══════════════════════
 // MAP är ENDA källan för både adapt() och kolumnkontrollen. En kolumn som inte
 // står här läses inte av något kort; en kolumn som står här MÅSTE finnas i
@@ -611,7 +629,10 @@ function boot(){
 dqRender();   // ett tomt kort far aldrig vara forklaringen — sag vad som saknas
 var now=new Date();
 var _MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-var _races=[['2026-09-05','HybridX · Stockholm']].concat(cfg.races||[]).map(function(r){return [r[0],r[1]==='Stockholm'?'Hyrox · Stockholm':r[1]];}).sort(function(a,b){return pd(a[0])-pd(b[0]);});
+// RACEN LASES UR CONFIG.races, ALDRIG UR EN LITERAL. Ett race lag som en kodrad
+// har och maste dessutom doptes om i farten — nasta race hade krävt en kodandring
+// i stallet for en datarad. Samma felklass som testschemat i ett vecko-ID.
+var _races=(cfg.races||[]).slice().sort(function(a,b){return pd(a[0])-pd(b[0]);});
 var _up=_races.filter(function(r){return pd(r[0])>now;});
 var _rc=document.getElementById('racecards');if(_rc)_rc.innerHTML=(_up.length?_up.slice(0,2):[]).map(function(r,i){var d=Math.max(0,Math.ceil((pd(r[0])-now)/DAY));var rd=pd(r[0]);var p=r[1].split(' · ');return '<div class="racecard'+(i===0?' next':'')+'"><div class="rc-d">'+d+'</div><div class="rc-u">days to go</div><div class="rc-n">'+p[0]+'</div><div class="rc-m">'+((p[1]?p[1]+' · ':'')+_MN[rd.getMonth()]+' '+rd.getDate())+'</div></div>';}).join('')||'<div class="rc-m">No races scheduled</div>';
 var _td=ymd(now);var ph=phaseAt(_td);
@@ -707,7 +728,7 @@ var ronT=byd(D.ron).map(function(r){var s=['v1','v2','v3','v4'].reduce(function(
 var cadS=byd(byd(D.run).filter(function(r){return num(r.cad)!=null;}).map(function(r){return {date:r.date,cad:num(r.cad),src:'run'};})
   .concat(byd(D.thr).filter(function(t){return t.type==='Run'&&num(t.cad)!=null;}).map(function(t){return {date:t.date,cad:num(t.cad),src:'threshold'};})))
   .map(function(r){return P(r.cad,r.cad+' spm ('+r.src+')',r.date);});
-function bspark(series,ref,cls){series=(series||[]).filter(function(o){return o&&o.v!=null;});if(series.length<2)return '<span class="na">trend after 2 logs</span>';var vals=series.map(function(o){return o.v;});var mn=Math.min.apply(0,vals),mx=Math.max.apply(0,vals);if(ref!=null){mn=Math.min(mn,ref);mx=Math.max(mx,ref);}var rng=(mx-mn)||1,h=46,pad=5;function Y(v){return (h-pad)-((v-mn)/rng)*(h-2*pad);}var xy=series.map(function(o,i){return {x:i/(series.length-1)*100,y:Y(o.v),o:o};});var poly=xy.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var band=100/(series.length-1);var dots=xy.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="1.7" fill="var(--acc)"></circle>';}).join('');var rl=ref!=null?'<line x1="0" y1="'+Y(ref).toFixed(1)+'" x2="100" y2="'+Y(ref).toFixed(1)+'" stroke="var(--mut)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" opacity="0.55"></line>':'';var hit=xy.map(function(p){return '<rect class="pt" x="'+Math.max(0,p.x-band/2).toFixed(1)+'" y="0" width="'+band.toFixed(1)+'" height="'+h+'" fill="transparent" data-d="'+String(p.o.d).replace(/"/g,'')+'" data-t="'+(p.o.t||'')+'"></rect>';}).join('');return '<svg class="'+(cls||'bspark')+'" role="img" aria-label="Trend, '+series.length
+function bspark(series,ref,cls){series=(series||[]).filter(function(o){return o&&o.v!=null;});if(series.length<2)return '<span class="na">trend from the second session</span>';var vals=series.map(function(o){return o.v;});var mn=Math.min.apply(0,vals),mx=Math.max.apply(0,vals);if(ref!=null){mn=Math.min(mn,ref);mx=Math.max(mx,ref);}var rng=(mx-mn)||1,h=46,pad=5;function Y(v){return (h-pad)-((v-mn)/rng)*(h-2*pad);}var xy=series.map(function(o,i){return {x:i/(series.length-1)*100,y:Y(o.v),o:o};});var poly=xy.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var band=100/(series.length-1);var dots=xy.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="1.7" fill="var(--acc)"></circle>';}).join('');var rl=ref!=null?'<line x1="0" y1="'+Y(ref).toFixed(1)+'" x2="100" y2="'+Y(ref).toFixed(1)+'" stroke="var(--mut)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" opacity="0.55"></line>':'';var hit=xy.map(function(p){return '<rect class="pt" x="'+Math.max(0,p.x-band/2).toFixed(1)+'" y="0" width="'+band.toFixed(1)+'" height="'+h+'" fill="transparent" data-d="'+String(p.o.d).replace(/"/g,'')+'" data-t="'+(p.o.t||'')+'"></rect>';}).join('');return '<svg class="'+(cls||'bspark')+'" role="img" aria-label="Trend, '+series.length
       +' points: '+series.map(function(o){return String(o.v);}).join(', ')+'" viewBox="0 0 100 '+h+'" preserveAspectRatio="none">'+rl+'<polyline points="'+poly+'" fill="none" stroke="var(--acc)" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>'+dots+hit+'</svg>';}function vo2card(v){var mk=v?Math.max(3,Math.min(97,Math.round((v-30)/55*100))):null;var cl=v==null?'':(v>=75?'World-class · top <1%':v>=60?'Elite endurance · top ~1%':v>=52?'Superior · ~95th':v>=45?'Good · ~75th':v>=38?'Above average':'Average');return card({cls:'tile', title:'Lens 1 · Lab baseline', titleCls:'lb',
   meta:'lab Jan 2026', desc:'VO₂max vs age-group norms (Cooper/ACSM, men 45–49).',
   why:(v==null?'No lab value logged yet — the next test is Jan 2027.':''),
@@ -739,6 +760,12 @@ function zoneMins(cut){
   return z;
 }
 function zoneWidget(z){var tot=z.reduce(function(a,b){return a+b;},0)||1;var Z=[null,{n:'Z1',p:'Recovery / rehab',c:'var(--mut)'},{n:'Z2',p:'Aerobic durability',c:'var(--good)'},{n:'Z3',p:'HYROX steady',c:'var(--acc)'},{n:'Z4',p:'Threshold',c:'var(--warn)'},{n:'Z5',p:'High stress → VO2max',c:'var(--bad)'}];var out='';for(var i=1;i<=5;i++){var pct=Math.round(z[i]/tot*100);out+='<div class="zrow"><span class="zn" style="color:'+Z[i].c+'">'+Z[i].n+'</span><span class="zp">'+Z[i].p+'</span><div class="zt"><span style="width:'+pct+'%;background:'+Z[i].c+'"></span></div><span class="zv">'+pct+'%<small> · '+(z[i]/60).toFixed(1)+'h</small></span></div>';}return out;}
+// C4: REFERENSLINJEN AR MARKT. bspark ritar bestOf() streckat utan legend, och
+// att sista punkten ligger PA linjen — basta hittills pa strukturen — ar kortets
+// basta nyhet. Den syntes bara for den som kande koden.
+function refLegend(v,unit,dec){
+  return v==null?'':'<div class="legend"><span>dashed = best so far · '+v.toFixed(dec==null?2:dec)+' '+unit+'</span><span>higher is better</span></div>';
+}
 function bestOf(series,lower){var vs=(series||[]).map(function(o){return o.v;}).filter(function(v){return v!=null;});if(!vs.length)return null;return lower?Math.min.apply(0,vs):Math.max.apply(0,vs);}function chipBest(series,lower){var vs=(series||[]).map(function(o){return o.v;}).filter(function(v){return v!=null;});if(vs.length<2)return null;var cur=vs[vs.length-1],best=lower?Math.min.apply(0,vs):Math.max.apply(0,vs);if(cur===best)return {cls:'good',txt:'best yet'};var d=Math.abs(cur-best);return {cls:'acc',txt:(lower?'+':'−')+(d<10?d.toFixed(1):Math.round(d))+' vs best'};}function chipGoal(cur,goal,up){if(cur==null)return null;var ok=up?cur>=goal:cur<=goal;return ok?{cls:'good',txt:'≥ '+goal+' ✓'}:{cls:'acc',txt:'aim '+goal};}function tile2(lb,val,chip,series,target,lower,body,desc,sub,meta,why){return card({cls:'tile',
   title:lb, titleCls:'lb', chip:chip, meta:meta||'from the logbook', desc:desc, why:why,
   body:'<div class="val">'+val+'</div>'+(sub?'<div class="tsub">'+sub+'</div>':'')+(body||bspark(series,target))});}function tile(lb,val,series,lower,body,desc,meta,why){return card({cls:'tile',
@@ -803,8 +830,8 @@ function mpanel(cls,title,sub,val,chip,series,refLine,body,desc,meta,why){
     desc:desc||sub, why:(why||(empty?'No logged session carries this value yet.':'')),
     body:'<div class="mrow"><div class="mval">'+val+'</div></div>'+(body||bspark(series,refLine))});}function panel(cls,title,sub,body,meta,why){return card({cls:'panel '+cls, title:title, sub:sub,
   meta:meta||'from the logbook', desc:sub, body:body, why:why});}
-function bigspark(vals,lower,desc){var s=(vals||[]).map(function(o){return o&&typeof o==='object'?o:{v:o,d:String(o),t:''};}).filter(function(o){return o.v!=null;});return s.length<2?'<div class="na">Awaiting data</div>':spark(s,lower,'bigspark',desc);}
-function barsvg(series,desc,wip){if(!series.length&&!wip)return '<div class="na">Awaiting</div>';
+function bigspark(vals,lower,desc){var s=(vals||[]).map(function(o){return o&&typeof o==='object'?o:{v:o,d:String(o),t:''};}).filter(function(o){return o.v!=null;});return s.length<2?emptyState('Will show the trend','from the second logged session'):spark(s,lower,'bigspark',desc);}
+function barsvg(series,desc,wip){if(!series.length&&!wip)return emptyState('Will show one bar per week','first logged week fills it');
  // wip = den PAGAENDE veckan. Ritas streckad och rors aldrig av vecka-mot-vecka-jamforelsen,
  // men syns direkt sa kortet inte ser dott ut mitt i veckan.
  var all=series.concat(wip?[wip]:[]);
@@ -858,8 +885,8 @@ function renderTrends(w){var c=cut(w);
    var plan=planMods();
    // EXISTENS KOMMER UR `threshold_modalities`, ORDNING UR `threshold_plan`.
    // Tva listor, tva olika jobb (master §6). Filtret sitter HAR och inte i
-   // planCards(), sa BADA konsumenterna — pace-korten OCH band adherence —
-   // far samma urval. Lag det bara i planCards() slank rodd in i bandkortet
+   // planCards(), sa BADA konsumenterna — EF-korten OCH spridningskortet —
+   // far samma urval. Lag det bara i planCards() slank rodd in i spridningskortet
    // sa fort ingen plan gallde (deloadvecka): `inPlan:!plan||...` gjorde da
    // varje modalitet med loggade rader in-plan. Att ingen plan galler far
    // ALDRIG utvidga vilka modaliteter som ritas.
@@ -884,26 +911,38 @@ function renderTrends(w){var c=cut(w);
        return la<lb?1:(la>lb?-1:0);
      });
  }
- function thrSeries(b){
-   return b.comp.filter(function(t){return psec(t[b.M.pace])!=null;})
-     .map(function(t){return P(psec(t[b.M.pace]),mmss(psec(t[b.M.pace]))+' '+b.M.unit+(num(t.bpm)!=null?' @ '+num(t.bpm)+' bpm':''),t.date);});
+ // SKI-TALET OCH LOP-TALET JAMFORS ALDRIG med varandra: olika enheter, olika
+ // skalor — samma regel som 2K ski mot 2K rodd. Varje serie lases mot sig sjalv.
+ // Serien gick forr i pace-sekunder, dar LAGRE ar battre; kurvan pekade alltsa
+ // nedat vid framsteg medan resten av sektionen pekar uppat.
+ function efRead(b,t){
+   if(b.M.ef==='watt'){ var w=num(t.watt); return w==null?'—':Math.round(w)+' W'; }
+   var p=psec(t[b.M.pace]); return p==null?'—':mmss(p)+' '+b.M.unit;
+ }
+ function efSeries(b){
+   var out=[];
+   b.comp.forEach(function(t){
+     var e=efOf(b.M,t); if(e==null) return;
+     var pt=P(e,e.toFixed(2)+' '+b.M.efUnit+' · '+efRead(b,t)+' at '+Math.round(num(t.bpm))+' bpm',t.date);
+     pt.r=t; out.push(pt);
+   });
+   return out;
  }
  // Kontrollvariabeln: ski/rodd = drag factor, lopning = lutning (master §6).
  function ctrlTag(b){
    var nm=b.M.ctrl==='drag'?'drag factor':'incline';
    if(b.ctrl==null)return '<span class="nain">'+nm+' not logged</span>';
-   if(b.ctrlDiff)return '<span class="bdelta warn">'+b.M.ctrlTxt(b.ctrl)+' vs '+b.M.ctrlTxt(b.ctrlPrev)+' — not comparable</span>';
+   if(b.ctrlDiff)return '<span class="bdelta warn">'+b.M.ctrlDiffTxt(b.ctrl,b.ctrlPrev)+' — not comparable</span>';
    return '<span style="color:var(--mut)">'+b.M.ctrlTxt(b.ctrl)+'</span>';
  }
  function spanTxt(b){
    var a=b.comp[0].date, z=last(b.comp).date;
    return b.comp.length+' session'+(b.comp.length===1?'':'s')+' · '+String(a).slice(5)+(a===z?'':' – '+String(z).slice(5));
  }
- // BANDET HALLS, JAGAS ALDRIG. Malbanden ar INTE satta — ett kalibreringspass per
- // modalitet skriver in dem i master. Tills dess sags det rakt ut.
- // bandOf() ar struken 9 sep 2026: det finns inget malband i pace eller watt.
- // Zonen ar PULSEN, farten ar utfallet — och utfallet ska flytta sig nar formen
- // gor det. Ett last fartband hade gjort utveckling till ett regelbrott (master §6).
+ // INGET MALBAND I PACE ELLER WATT, och det ska aldrig införas (master §6, 9 sep
+ // 2026). Zonen ar PULSEN, farten ar utfallet — och utfallet ska flytta sig nar
+ // formen gor det; ett last fartband hade gjort utveckling till ett regelbrott.
+ // Kvaliteten mats som spridningen mellan intervallerna plus output per hjartslag.
  var thrAll=thrBlocks();
  var thrB=thrAll.filter(function(b){return b.inPlan;});
  // EN MODALITET SOM PLANEN KRAVER MEN SOM SAKNAR RADER ar inte "ingenting" —
@@ -911,32 +950,51 @@ function renderTrends(w){var c=cut(w);
  // galler modaliteter planen inte tranar; en som blocket bygger far en vantande
  // plats som sager vad som ska loggas, sa kortet FYLLS i stallet for att dyka upp.
  // Utan den syntes inte att halva v.38-40-planen (run) var otranad.
- function paceCard(b){
-   var srs=thrSeries(b);
-   var v=costVerdict(b);
-   var notes=[];
-   if(v.delta)notes.push(v.delta+' vs '+String(b.prev.date).slice(5));
-   if(v.why)notes.push('<span class="nain">'+v.why+'</span>');
-   notes.push(spanTxt(b));
+ // ETT KORT SVARAR PA EN FRAGA. Ett tal, en enhet, en jamforelse — och ingen
+ // mening om hur det INTE ska lasas. Undertexten forklarade forr mattet
+ // ("faster at the same or lower HR = progress"); med EF ar talet sjalvforklarande
+ // och undertexten sager i stallet vad det ar byggt av.
+ function efCard(b){
+   var srs=efSeries(b), cur=last(srs), best=bestOf(srs,false);
+   var skipped=b.comp.length-srs.length;
+   var notes=[spanTxt(b)];
+   if(skipped)notes.push(skipped+' without avg HR — not counted');
    if(b.dropped)notes.push(b.dropped+' on another structure — not plotted');
-   var hr=num(b.last.bpm);
-   return mpanel('eng','Threshold '+b.M.label+' — pace at cost',
-     b.struct+(b.ctrl!=null?' · '+b.M.ctrlTxt(b.ctrl):'')+' · faster at the same or lower HR = progress',
-     ((last(srs)||{}).v==null?'—':mmss((last(srs)||{}).v)+(hr!=null?'<small> @ '+hr+' bpm</small>':'<small> @ — bpm</small>')),
-     v.txt?{cls:v.cls,txt:v.txt}:null,
-     srs,bestOf(srs,true),
-     bspark(srs,bestOf(srs,true))+'<div class="foot-note">'+notes.join(' · ')+'</div>',
-     b.M.label+' threshold pace per '+(b.M.unit==='/km'?'km':'500 m')+' read against its cost. Master: progress is the same pace at a LOWER heart rate — pace alone can be bought with effort. Only sessions on the same structure ('+b.struct+') are compared; modalities are never mixed.');
+   var title='Threshold '+b.M.label+' — output per heartbeat';
+   if(!cur) return panel('eng',title,b.struct+(b.ctrl!=null?' · '+b.M.ctrlTxt(b.ctrl):''),
+     emptyState('Will show '+b.M.efUnit,
+       b.comp.length+' logged, none with avg HR yet',
+       'avg HR is the denominator')
+     +'<div class="foot-note">'+notes.join(' · ')+'</div>',null,
+     'Output per heartbeat needs avg HR. Without it the session cannot be counted, and the card waits rather than guessing.');
+   var chip;
+   if(srs.length>1){
+     var mean=srs.reduce(function(a,o){return a+o.v;},0)/srs.length;
+     var pct=(cur.v/mean-1)*100;
+     chip={cls:pct>=0?'good':'acc',txt:(pct>=0?'+':'−')+Math.abs(pct).toFixed(0)+'% vs average'};
+   } else chip={cls:'acc',txt:'first measurement'};
+   return mpanel('eng',title,
+     efRead(b,cur.r)+' at '+Math.round(num(cur.r.bpm))+' bpm · '+b.struct,
+     cur.v.toFixed(2)+'<small> '+b.M.efUnit+'</small>',chip,srs,best,
+     bspark(srs,best)+refLegend(best,b.M.efUnit)
+     +'<div class="foot-note">'+ctrlTag(b)+' · '+notes.join(' · ')+'</div>',
+     b.M.label+' threshold output per heartbeat: '+(b.M.ef==='watt'?'avg watt divided by avg HR':'metres per minute divided by avg HR')+'. Higher is better. Only sessions on the same structure ('+b.struct+') are compared, and the ski number is never read against the run number — different units.',
+     srs.length+(srs.length===1?' session':' sessions'));
  }
+ // D1: RADEN RIKTADE SIG TILL INGEN. Den raknade upp SPEC-falten ("Log pace /km ·
+ // incline · cadence ...") och slutade "nothing to build" — en anteckning till
+ // byggaren. Mattias loggar inte konditionsdata; den kommer ur skarmdumpen.
+ // Kvar star det lasaren kan agera pa: hall kontrollvariabeln stilla.
  function waitCard(m,inPlan){
    var M=THR_MODES[m];
-   var need=(M.ctrl==='drag'?'pace /500m · avg watt · drag factor':'pace /km · incline · cadence');
    var nb=inPlan?null:nextBlockFor(m);
-   var sub=inPlan?'In this block’s plan · awaiting the first session'
-     :(nb?('Not trained in this block · starts '+wdate(nb[0])):'Not in the plan right now');
-   return panel('eng','Threshold '+M.label+' — pace at cost', sub,
-     '<div class="na">No '+M.label+' threshold logged yet</div>'
-     +'<div class="foot-note">Log '+need+' · interval splits · avg HR · zone split — the card fills itself, nothing to build.</div>');
+   var when=inPlan?'first session of this block fills it'
+     :(nb?('first session '+wdate(nb[0])):'not in the plan right now');
+   var todo='keep the same '+(M.ctrl==='drag'?'drag factor':'incline')+' every time, or the series is not comparable';
+   return panel('eng','Threshold '+M.label+' — output per heartbeat',
+     inPlan?'in this block’s plan':(nb?('starts '+wdate(nb[0])):'not in the plan right now'),
+     emptyState('Will show '+M.efUnit,when,todo),null,
+     'No '+M.label+' threshold session logged yet — the card fills on the first one.');
  }
  // BADA TROSKELMODALITETERNA HAR ALLTID EN PLATS. Master §6: "Trosk el kors pa ski
  // OCH lopning" — och "LOPNINGEN VAGER TYNGST … prioritera aldrig ski over lopning
@@ -956,39 +1014,26 @@ function renderTrends(w){var c=cut(w);
    });
    return ord.map(function(m){
      var b=thrB.concat(thrAll.filter(function(x){return x.key===m;})).filter(function(x){return x.key===m;})[0];
-     return b?paceCard(b):waitCard(m,plan.indexOf(m)>=0);
+     return b?efCard(b):waitCard(m,plan.indexOf(m)>=0);
    });
  }
- var bandBody=thrB.length?thrB.map(function(b){
-   var sp=spreadOf(b.last);
-   // INGET MALBAND I PACE ELLER WATT (beslut 9 sep 2026, master §6). Zonen ar
-   // PULSEN; farten ar utfallet och ska flytta sig nar formen gor det. Ett last
-   // fartband hade gjort utveckling till ett regelbrott — kortet mater darfor
-   // spridningen, och pace lases mot pulsen i kortet *pace at cost*.
-   var head;
+ // F: ETT KORT SOM SAKNAR SIN EGEN DATA SAGER DET OCH SLUTAR DAR. Fram till
+ // 13 sep motsade kortet sig sjalvt: rubriken lovade spridning, head sa att den
+ // INTE gick att mata — och darefter renderades tre tal som inte var spridning
+ // (pace, meter, watt) plus en brasklapp om att de inte var malet. En avlasning
+ // som behover en brasklapp hor hemma i ett annat kort; de talen bor i EF-kortet.
+ // B2: bandkontrollen finns inte — malbandet avskaffades 9 sep (master §6).
+ var spreadBody=thrB.length?thrB.map(function(b){
+   var sp=spreadOf(b.last), head, foot;
    if(sp){
-     head='<div class="kvv">'+mmss(sp.range)+'<small> spread across '+sp.n+' intervals'+(sp.pct!=null?' · '+sp.pct.toFixed(1)+'%':'')+'</small></div>';
+     head='<div class="kvv">'+mmss(sp.range)+'<small> across '+sp.n+' intervals'+(sp.pct!=null?' · '+sp.pct.toFixed(1)+'%':'')+'</small></div>';
+     foot='<div class="foot-note">'+ctrlTag(b)+'</div>';
    } else {
-     head='<div class="na">Interval splits not logged — the spread cannot be measured</div>';
+     head='<div class="na" data-empty="1">Interval splits not logged — the spread cannot be measured</div>';
+     foot='<div class="foot-note">one pace value per interval, '+b.M.unit+'</div>';
    }
-   var notes=[];
-   if(sp)notes.push('Spread '+mmss(sp.range)+' across '+sp.n+' intervals'+(sp.pct!=null?' · '+sp.pct.toFixed(1)+'%':''));
-   // EFFORT AR AVSKAFFAT (beslut 9 sep 2026). Kortet vilar nu HELT pa matta tal:
-   // holls bandet, och hur stor var spridningen — vilket ocksa ar det master §6
-   // kallar kvaliteten. Effort var en proxy sa lange malbanden inte var satta.
-   // SAG NAR BANDET SAKNAS: utan kalibrerat band gar "holls bandet" inte att
-   // besvara, och da ska kortet saga det rakt ut i stallet for att visa
-   // spridningen som om den vore hela domen.
-
-   var read=[];
-   var pv=psec(b.last[b.M.pace]); if(pv!=null)read.push(mmss(pv)+' '+b.M.unit);
-   var mv=num(b.last.meters); if(mv!=null)read.push(fmtN(mv)+' m');
-   var wv=num(b.last.watt); if(wv!=null)read.push(Math.round(wv)+' W');
-   return '<div style="margin-bottom:14px"><div class="kv"><span class="kvl">'+b.M.label+' · '+b.struct+'</span></div>'
-     +head
-     +(notes.length?'<div class="foot-note">'+notes.join(' · ')+'</div>':'')
-     +'<div class="foot-note">'+ctrlTag(b)+(read.length?' · '+read.join(' · ')+' — a readout, never the target':'')+'</div></div>';
- }).join(''):'<div class="na">No '+((planMods()||[]).join(' · ')||'threshold')+' session logged in this block yet — the band check runs on the first one.</div>';
+   return '<div style="margin-bottom:14px"><div class="kv"><span class="kvl">'+b.M.label+' · '+b.struct+'</span></div>'+head+foot+'</div>';
+ }).join(''):emptyState('Will show the spread between the intervals','first '+((planMods()||[]).join(' · ')||'threshold')+' session of this block fills it');
  // Skalet sags EN gang per kort, inte en gang per modalitet: tre identiska rader
  // om samma sak laser man forbi, och da forsvinner det som faktiskt star dar.
  // MASTER §6: "Trosk el kors pa ski och lopning. INGET ANNAT." Rodd ar aldrig ett
@@ -1002,7 +1047,7 @@ function renderTrends(w){var c=cut(w);
  // utan att en kodrad ror sig.
 
 var _zm=zoneMins(c);var _zt=_zm.reduce(function(a,b){return a+b;},0)||1;var _z24=Math.round((_zm[2]+_zm[4])/_zt*100);var zoneBody=zoneWidget(_zm)+'<div class="foot-note">'+(_zt>1?((_zt/60).toFixed(1)+' h from logged zone splits'):'No zone split logged yet')+(_zm.skipped?(' · '+_zm.skipped+' session'+(_zm.skipped===1?'':'s')+' without split — not counted'):' · every session has a split')+'</div>';document.getElementById('lens3eng').innerHTML=planCards().concat([
- panel('eng','Threshold — spread between intervals','Evenness across the intervals · pace is read against heart rate, never against a target',bandBody),
+ panel('eng','Threshold — spread between intervals','Evenness across the intervals of one session',spreadBody,null,'The spread between the interval splits of the latest threshold session on each modality. It is read on its own — output per heartbeat is the other half, and it has its own card.'),
   mpanel('eng','Roncevic total','Race-sim · training side · vs your best',mmss((last(rt)||{}).v),chipBest(rt,true),rt,bestOf(rt,true),null,'Roncevic race-sim total — training data, never compared to race goals.'),
   (function(){var vp=fdate(D.vo2||[],c).filter(function(x){return psec(x.pace)!=null;}).map(function(x){return P(psec(x.pace),mmss(psec(x.pace))+' /km',x.date);});
    if(vp.length)return panel('eng','VO2 / intervals — pace','Z5–6 · lower is faster',bigspark(vp,true,'VO2 interval pace per km — lower is faster.'));
@@ -1081,7 +1126,7 @@ document.getElementById('engine').innerHTML=[
     v.txt?{cls:v.cls,txt:v.txt}:null, wa, bestOf(wa,false),
     bspark(wa,bestOf(wa,false))+(notes.length?'<div class="foot-note">'+notes.join(' · ')+'</div>':''),
     'Z2 bike power read against what it cost in heart rate. Master: progress is the same work at a LOWER heart rate — watt alone can be bought by pushing harder. Watt is valid at every drag factor, so the series is never split; drag rides along on each point because a heavier drag is a different mechanical task at the same cadence.');})(),
-  mpanel('eng span','Engine — time by zone','Where the engine is built · Z2 durability + Z4 threshold = the workhorses (coach)',((_zt>1?(_zt/60).toFixed(1):'—')+'<small> h engine</small>'),(_zt>1?{cls:'acc',txt:'Z2+Z4 '+_z24+'%'}:null),null,null,zoneBody,'Training time across the 5 lab-calibrated zones. One rule, no exceptions: a session counts only if it has a logged zone split — watch raw split on run, threshold, Hyrox, Roncevic and Joker; erg-app split (bike-calibrated) on BikeErg. Sessions without a split are not counted and are named below the bars. Threshold quality is judged by whether a predetermined output band was HELD and by the spread between intervals — never by HR, and never by total metres.')
+  mpanel('eng span','Engine — time by zone','Where the engine is built · Z2 durability + Z4 threshold = the workhorses (coach)',((_zt>1?(_zt/60).toFixed(1):'—')+'<small> h engine</small>'),(_zt>1?{cls:'acc',txt:'Z2+Z4 '+_z24+'%'}:null),null,null,zoneBody,'Training time across the 5 lab-calibrated zones. One rule, no exceptions: a session counts only if it has a logged zone split — watch raw split on run, threshold, Hyrox, Roncevic and Joker; erg-app split (bike-calibrated) on BikeErg. Sessions without a split are not counted and are named below the bars. Threshold quality is the spread between the intervals plus output per heartbeat — never total metres.')
  ].join('');
 function stLast(f){var a=byd(D.hyrox).map(function(h){return num(h[f]);}).filter(function(v){return v!=null;});return a.length?a[a.length-1]:null;}
 // `fixed` = stationen VAGAS INTE (master §7). Utan den star farmers pa
@@ -1138,7 +1183,9 @@ document.getElementById('chassis').innerHTML=[
    function ser(f,tag){return g.filter(function(x){return num(x[f])!=null;}).map(function(x){return P(num(x[f]),num(x[f])+' kg '+tag,x.date);});}
    var gr=ser('r','R'),gl=ser('l','L');
    var sub='Weekly · best of 3 per hand · the limiter behind farmers & sled pull';
-   if(!gr.length&&!gl.length)return panel('cha','Grip strength',sub,'<div class="na">First measurement sets the baseline</div>');
+   if(!gr.length&&!gl.length)return panel('cha','Grip strength',sub,
+     emptyState('Will show grip strength per hand','first weekly measurement fills it','best of 3 per hand'),null,
+     'Nothing logged yet — grip is the limiter behind farmers and sled pull.');
    function hand(name,srs){if(!srs.length)return '<div><div class="kvl">'+name+'</div><div class="kvv">—</div></div>';
     var cur=srs[srs.length-1].v;var c=chipBest(srs,false);
     return '<div><div class="kv"><span class="kvl">'+name+'</span>'+(c?'<span class="bdelta '+c.cls+'">'+c.txt+'</span>':'')+'</div><div class="kvv">'+cur+'<small>kg</small></div>'+(srs.length>1?bspark(srs,bestOf(srs,false)):'')+'</div>';}
@@ -1152,7 +1199,7 @@ document.getElementById('chassis').innerHTML=[
  
 function bodyCard(title,series,opt){opt=opt||{};var u=opt.unit||'',dec=opt.decimals||0;function f(v){return v==null?'—':(dec?(+v).toFixed(dec):Math.round(v));}if(!series||!series.length)return card({cls:'panel bcard', title:title, sub:(opt.empty||'Start logging'),
   meta:'0 logs', desc:opt.desc||title, why:'Nothing logged for this metric yet — the card fills on the first entry.',
-  body:'<div class="na" data-empty="1" style="padding:12px 0">No data yet</div>'});var cur=series[series.length-1].v;var ref=opt.baseline!=null?opt.baseline:series[0].v;var delta=cur-ref;var arrow=delta>0?'▲':(delta<0?'▼':'–');var cls='acc';if(opt.goodLow)cls=(cur<=ref?'good':'warn');if(opt.goodHigh)cls=(cur>=ref?'good':'warn');var dtxt=series.length<2?'first log':arrow+' '+f(Math.abs(delta))+(u?' '+u:'')+' '+(opt.refLabel||'');var rl=opt.baseline!=null?opt.baseline:(series.reduce(function(a,o){return a+o.v;},0)/series.length);return card({cls:'panel bcard', title:title, chip:{cls:cls, txt:dtxt}, desc:opt.desc,
+  body:emptyState('Will show '+title.toLowerCase()+' over time','first log fills it')});var cur=series[series.length-1].v;var ref=opt.baseline!=null?opt.baseline:series[0].v;var delta=cur-ref;var arrow=delta>0?'▲':(delta<0?'▼':'–');var cls='acc';if(opt.goodLow)cls=(cur<=ref?'good':'warn');if(opt.goodHigh)cls=(cur>=ref?'good':'warn');var dtxt=series.length<2?'first log':arrow+' '+f(Math.abs(delta))+(u?' '+u:'')+' '+(opt.refLabel||'');var rl=opt.baseline!=null?opt.baseline:(series.reduce(function(a,o){return a+o.v;},0)/series.length);return card({cls:'panel bcard', title:title, chip:{cls:cls, txt:dtxt}, desc:opt.desc,
   body:'<div class="bbig">'+f(cur)+'<small>'+u+'</small></div><div class="sub">'+(opt.sub||'')+'</div>'+bspark(series,rl)});}
 var _rb=Math.round(rhrBase*10)/10;
 var slq=recF.filter(function(r){return num(r.sleepq)!=null;}).map(function(r){return P(num(r.sleepq),num(r.sleepq)+' /100',r.date);});
@@ -1162,16 +1209,21 @@ var vo2=byd(D.test).filter(function(t){return num(t.vo2)!=null;}).map(function(t
 var ll=D.lifelab&&D.lifelab[0];var lac='';
 if(ll){var spd=[10,11,12,13],la=[num(ll.l10),num(ll.l11),num(ll.l12),num(ll.l13)];var mxl=Math.max.apply(0,la.filter(function(v){return v!=null;}))||6;var pts=spd.map(function(s,i){return (((s-10)/3)*100).toFixed(0)+','+(52-(la[i]/mxl)*48).toFixed(1);}).join(' ');var y4=(52-(4/mxl)*48).toFixed(1);lac='<svg class="bigspark" viewBox="0 0 100 56" preserveAspectRatio="none"><line x1="0" y1="'+y4+'" x2="100" y2="'+y4+'" stroke="var(--warn)" stroke-width="1" stroke-dasharray="4"/><polyline points="'+pts+'" fill="none" stroke="var(--acc)" stroke-width="2" vector-effect="non-scaling-stroke"/>'+spd.map(function(s,i){return '<rect class="pt" x="'+((((s-10)/3)*100)-16).toFixed(0)+'" y="0" width="32" height="56" fill="transparent" data-d="'+la[i]+' mmol @ '+s+' km/h" data-t=""></rect>';}).join('')+'</svg><div class="axis"><span>10 km/h</span><span>13 km/h</span></div><div class="legend" style="margin-top:5px"><span>'+la.join(' · ')+' mmol/L</span><span>dashed = 4 mmol</span></div>';}
 (function(){
- var LENS2=[['2K Ski',/2\s*k.*ski|ski.*2\s*k/i,'W37',true],['2K Row',/2\s*k.*(row|rodd)|(row|rodd).*2\s*k/i,'W37',true],['FTP Bike',/ftp/i,'W41',false],['5K Run',/5\s*k.*(run|löp)|(run|löp).*5\s*k/i,'W41',true]];
  var rows=byd(D.test);
- var tiles=LENS2.map(function(t){
+ var tiles=LENS2_TESTS.map(function(t){
   // Resultat kan vara tid ("7:12.4") eller tal (245). num() gav 7 för mm:ss — parsa tid först.
   var tval=function(r){var v=String(r.result==null?'':r.result);return v.indexOf(':')>=0?psec(v):num(r.result);};
   var srs=rows.filter(function(r){return t[1].test(String(r.test||''))&&tval(r)!=null;}).map(function(r){return P(tval(r),String(r.result)+' '+(r.unit||''),r.date);});
-  if(!srs.length)return card({cls:'tile', title:t[0], titleCls:'lb', meta:'0 tests',
-  desc:'Calibrated max test — always rested, same protocol, deload weeks only.',
-  why:'No result logged for this test yet — it is run on a deload week.',
-  body:'<div class="na" data-empty="1" style="padding:12px 0">Awaiting '+t[2]+'</div>'});
+  if(!srs.length){
+   // A1: kortet sa bokstavligen "Awaiting W37" — ett internt handtag, for en
+   // vecka som redan gatt. Datumet kommer ur CONFIG.phases femte element.
+   var np=nextTest(cfg.phases,t[1],ymd(now));
+   return card({cls:'tile', title:t[0], titleCls:'lb', meta:'0 tests',
+   desc:'Calibrated max test — always rested, same protocol, deload weeks only.',
+   why:'No result logged for this test yet — it is run on a deload week.',
+   body:emptyState('Will show the result',
+     np?('next test week '+wdate(np[0])+'–'+wdate(np[1])):'no test week scheduled for it',
+     np?'rested, same protocol':null)});}
   var lastV=srs[srs.length-1];
   var trows=rows.filter(function(r){return t[1].test(String(r.test||''))&&tval(r)!=null;});
   var lastR=trows[trows.length-1], prevR=trows.length>1?trows[trows.length-2]:null;
@@ -1186,8 +1238,8 @@ if(ll){var spd=[10,11,12,13],la=[num(ll.l10),num(ll.l11),num(ll.l12),num(ll.l13)
     meta:srs.length+' tests',
     chipRaw:(function(){var dragBad=(dgL!=null&&dgP!=null&&dgL!==dgP);
     if(dragBad)return '<span class="bdelta warn" data-chip="1">not comparable</span>';
-    var cb=chipBest(srs,t[3]);return cb&&cb.txt?'<span class="bdelta '+cb.cls+'" data-chip="1">'+cb.txt+'</span>':'';})()||null,
-    body:'<div class="val">'+(t[3]?mmss(lastV.v):lastV.d)+'</div>'+metaRow+bspark(srs,null)});});
+    var cb=chipBest(srs,t[2]);return cb&&cb.txt?'<span class="bdelta '+cb.cls+'" data-chip="1">'+cb.txt+'</span>':'';})()||null,
+    body:'<div class="val">'+(t[2]?mmss(lastV.v):lastV.d)+'</div>'+metaRow+bspark(srs,null)});});
  // Testschemat las UR CONFIG, aldrig ur ett vecko-ID i koden. Literalen sa
  // 'W37 · Sep 7-13' langt efter att den veckan kunde flyttas, och nasta-test-kortet
  // gissade testet ur strangen 'W41'. Flyttas en testvecka rors ingen kodrad.
@@ -1207,14 +1259,14 @@ if(ll){var spd=[10,11,12,13],la=[num(ll.l10),num(ll.l11),num(ll.l12),num(ll.l13)
   title:'Lactate curve · Lens 1', sub:'Jan 2026 baseline · sets zones', meta:'lab Jan 2026',
   desc:'Blood lactate vs running speed — sets your training zones.',
   why:(lac?'':'No lactate test logged — zones stay provisional until the next lab.'),
-  body:(lac||'<div class="na" data-empty="1">Awaiting lab</div>')});
+  body:(lac||emptyState('Will show blood lactate vs running speed','fills when a lab test is logged','it sets the zones'))});
 function benchCard(){
  var el=document.getElementById('bench');
  var F=(D.field||[]).filter(function(r){return r.st&&r.med!=null;});
  // Ar kortet tomt AV EN ANLEDNING sager vi anledningen. Tyst "pending" ar bara
  // sant nar inget race hamtats an — aldrig nar en kolumn saknas i payloaden.
  var _dq=dqNote('Field');
- if(!F.length){el.innerHTML=_dq+(_dq?'':'<div class="na">Field data pending — no measured Pro Men 45–49 results loaded yet.</div>');return;}
+ if(!F.length){el.innerHTML=_dq+(_dq?'':emptyState('Will show your gap to the Pro Men 45–49 field','fills when race results are fetched','measured splits only, never interpolated'));return;}
  var by={};F.forEach(function(r){by[r.st]=r;});
  var fr=by['Full race']||{};
  // Bara SINGELrace far jamforas. Doubles och relay ar en annan tavling.
@@ -1412,7 +1464,7 @@ function selftest(raw){
     var d=modeGuard();
     return d.length ? {ok:false, note:'utan kort: '+d.join(', ')}
                     : {ok:true, note:Object.keys(THR_MODES).join(' · ')}; });
-  t('Spridning och band räknas ur intervallsplitsen', function(){
+  t('Spridningen räknas ur intervallsplitsen', function(){
     var xs=splitList('1:55.2 · 1:57.0 · 1:56.0');
     if(!xs||xs.length!==3) return 'splitList gav '+JSON.stringify(xs);
     var range=Math.max.apply(0,xs)-Math.min.apply(0,xs);
@@ -1458,16 +1510,57 @@ function selftest(raw){
     });
     return bad.length ? {ok:false, note:bad.join(' · ')}
       : {ok:true, note:(CONFIG.phases||[]).length+' faser, alla veckoetiketter rätt'}; });
-  t('Framsteg mäts mot pulsen, inte bara pace', function(){
-    var M=THR_MODES.Ski;
-    var mk=function(p1,h1,p0,h0){return {M:M, last:{'pace':p1,bpm:h1}, prev:{'pace':p0,bpm:h0,date:'2026-01-01'}};};
-    var same=costVerdict(mk('1:56',140,'1:56',150));
-    var bought=costVerdict(mk('1:53',160,'1:56',140));
-    var blind=costVerdict(mk('1:53',null,'1:56',140));
-    if(same.cls!=='good') return 'samma fart till lägre puls lästes som '+same.txt;
-    if(bought.txt!=='faster, paid for') return 'snabbare till högre puls lästes som '+bought.txt;
-    if(blind.txt!=='cost unknown') return 'utan puls lästes det som '+blind.txt;
-    return {ok:true, note:'"'+same.txt+'" · "'+bought.txt+'" · "'+blind.txt+'"'}; });
+  t('Framsteg mäts som output per hjärtslag', function(){
+    var S=THR_MODES.Ski, Rn=THR_MODES.Run;
+    var ski=efOf(S,{watt:223,bpm:147});           // 223/147 = 1.5170
+    var run=efOf(Rn,{pacekm:'5:00',bpm:160});     // (60000/300)/160 = 1.25
+    if(ski==null||Math.abs(ski-1.5170)>0.001) return 'ski gav '+ski+', väntade 1.517';
+    if(run==null||Math.abs(run-1.25)>0.001) return 'löpning gav '+run+', väntade 1.25';
+    var b=efOf(S,{watt:232,bpm:145});
+    if(!(b>ski)) return 'mer watt till lägre puls gav inte ett högre tal';
+    var f=efOf(Rn,{pacekm:'4:40',bpm:160});
+    if(!(f>run)) return 'snabbare pace vid samma puls gav inte ett högre tal';
+    return {ok:true, note:'ski '+ski.toFixed(2)+' · löp '+run.toFixed(2)+' · högre är bättre på båda'}; });
+  t('Ett pass utan snittpuls hoppas över, serien dör inte', function(){
+    var S=THR_MODES.Ski, Rn=THR_MODES.Run;
+    var bad=[];
+    if(efOf(S,{watt:223,bpm:''})!==null) bad.push('ski utan puls gav ett värde');
+    if(efOf(Rn,{pacekm:'5:00',bpm:null})!==null) bad.push('löp utan puls gav ett värde');
+    if(efOf(S,{bpm:147})!==null) bad.push('ski utan watt gav ett värde');
+    if(efOf(Rn,{bpm:160})!==null) bad.push('löp utan pace gav ett värde');
+    if(efOf(S,{watt:223,bpm:0})!==null) bad.push('puls 0 gav ett värde');
+    return bad.length ? {ok:false, note:bad.join(' · ')}
+      : {ok:true, note:'null, inte NaN — punkten faller ur serien'}; });
+  t('Ski-talet och löp-talet blandas aldrig', function(){
+    var u={}, bad=[];
+    Object.keys(THR_MODES).forEach(function(k){var M=THR_MODES[k];
+      if(!M.ef||!M.efUnit){bad.push(k+' saknar ef-definition');return;}
+      (u[M.efUnit]=u[M.efUnit]||[]).push(k);});
+    if(bad.length) return bad.join(' · ');
+    var ks=Object.keys(u);
+    return ks.length<2 ? 'alla modaliteter delar enhet — talen går att läsa mot varandra'
+      : {ok:true, note:ks.map(function(x){return u[x].join('/')+' = '+x;}).join(' · ')}; });
+  t('Målbandet finns inte kvar i konfigurationen', function(){
+    var bad=Object.keys(CONFIG).filter(function(k){return /band/i.test(k);});
+    Object.keys(THR_MODES).forEach(function(k){
+      Object.keys(THR_MODES[k]).forEach(function(f){if(/band/i.test(f))bad.push('THR_MODES.'+k+'.'+f);});});
+    return bad.length ? {ok:false, note:'bär '+bad.join(', ')+' — zonen är pulsen, farten är utfallet'}
+      : {ok:true, note:'inga bandnycklar kvar'}; });
+  t('Testkorten hämtar sitt datum ur CONFIG, aldrig ur ett vecko-id', function(){
+    var bad=[], res=[];
+    LENS2_TESTS.forEach(function(x){
+      x.forEach(function(el){if(typeof el==='string'&&/^W\d/.test(el))bad.push(x[0]+' bär vecko-id:t '+el+' i koden');});
+      var p=nextTest(CONFIG.phases,x[1]);
+      if(p&&!/^\d{4}-\d{2}-\d{2}$/.test(String(p[0]))) bad.push(x[0]+' → '+p[0]);
+      res.push(x[0]+' '+(p?p[0]:'–'));});
+    return bad.length ? {ok:false, note:bad.join(' · ')} : {ok:true, note:res.join(' · ')}; });
+  t('Racen bor i CONFIG.races, inte i en kodrad', function(){
+    var r=(CONFIG.races||[]);
+    var bad=r.filter(function(x){return !/^\d{4}-\d{2}-\d{2}$/.test(String(x[0]))||!String(x[1]||'').trim();})
+      .map(function(x){return JSON.stringify(x);});
+    if(bad.length) return 'ofullständig racerad: '+bad.join(' · ');
+    return r.length ? {ok:true, note:r.length+' race · '+r.map(function(x){return x[1];}).join(' · ')}
+                    : {ok:false, note:'inga race i CONFIG'}; });
 
   t('Inga fynd i dataintegritetskontrollen', function(){
     return DQ.length ? {ok:false, note:DQ.length+' fynd — se listan nedan'} : true; });
