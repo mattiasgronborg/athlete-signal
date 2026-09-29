@@ -186,7 +186,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 // for Mattias och coach Ulrik — och ingen av dem bygger dashboarden. Vad som
 // andrades hor hemma i handoffen, keyat pa numret. Den 29 aug stod hela
 // pass C:s andringslogg har: "omdesign: en kortfabrik med rubrik + chip ...".
-var BUILD="3.36 · 2026-09-26";
+var BUILD="3.37 · 2026-09-29";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -415,6 +415,10 @@ function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'
 // dit sa hjalparen gar att testa utan payload.
 function phaseAt(ds){var ph=((cfg||CONFIG||{}).phases)||[];return ph.find(function(x){return ds>=x[0]&&ds<=x[1];})||null;}
 function wkIsDL(k){var d=isoMon(k);if(!d)return false;var p=phaseAt(ymd(d));return !!(p&&/Deload|Taper/.test(p[3]));}
+// CHIPET NAMNGER VECKAN DET GALLER (build 3.37). Volymkorten visar den senast AVSLUTADE
+// veckan, och ett chip som bara sa "deload wk" lastes som att INNEVARANDE vecka var
+// deload — 29 sep stod det pa W40 (Build) for att W39 var Deload. Veckan star nu i chipet.
+function dlChip(k){var d=isoMon(k);var p=d?phaseAt(ymd(d)):null;var w=(String(k).match(/W\d{2}/)||[''])[0];return {cls:'acc',txt:w+' · '+(p&&/Taper/.test(p[3])?'taper':'deload')};}
 
 function spark(series,lower,cls,desc){series=(series||[]).map(function(o){return (o&&typeof o==='object')?o:{v:o,d:String(o),t:''};}).filter(function(o){return o.v!=null;});if(series.length<2)return '<span class="na">—</span>';var vals=series.map(function(o){return o.v;});var mn=Math.min.apply(0,vals),mx=Math.max.apply(0,vals),rng=(mx-mn)||1,h=cls==='bigspark'?56:26;var xy=series.map(function(o,i){return {x:i/(series.length-1)*100,y:(h-3)-((o.v-mn)/rng)*(h-6),o:o};});var poly=xy.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');var imp=vals[vals.length-1]>vals[0];if(lower)imp=!imp;var c=imp?'var(--good)':'var(--warn)';var band=100/(series.length-1);var dots=xy.map(function(p){return '<rect x="'+(p.x-0.5).toFixed(1)+'" y="'+(p.y-2).toFixed(1)+'" width="1" height="4" fill="'+c+'"></rect>';}).join('');var hit=xy.map(function(p){return '<rect class="pt" x="'+Math.max(0,p.x-band/2).toFixed(1)+'" y="0" width="'+band.toFixed(1)+'" height="'+h+'" fill="transparent" data-d="'+String(p.o.d).replace(/"/g,'')+'" data-t="'+(p.o.t||'')+'"></rect>';}).join('');return '<svg class="'+(cls||'spark')+'" role="img" aria-label="'+String(desc||'Trend')
       .replace(/"/g,'')+' — '+series.length+' points, '+String(series[0].d).replace(/"/g,'')
@@ -1060,7 +1064,7 @@ document.getElementById('engine').innerHTML=[
   (function(){var cw=iso(now);var comp=vkk.filter(function(k){return k<cw;});var lastC=comp.length?vv[comp[comp.length-1]]:null;var sofar=vv[cw]!=null?vv[cw]:0;
    var prevC=comp.length>1?vv[comp[comp.length-2]]:null;
    var pctR=(lastC!=null&&prevC)?Math.round((lastC/prevC-1)*100):null;
-   var chipR=pctR==null?null:(wkIsDL(comp[comp.length-1])?{cls:'acc',txt:'deload wk'}:{cls:(pctR>=0?'good':'warn'),txt:(pctR>=0?'+':'')+pctR+'% wk/wk'});
+   var chipR=pctR==null?null:(wkIsDL(comp[comp.length-1])?dlChip(comp[comp.length-1]):{cls:(pctR>=0?'good':'warn'),txt:(pctR>=0?'+':'')+pctR+'% wk/wk'});
    var lastKr=comp.length?comp[comp.length-1]:null;
    return mpanel('eng','Weekly run volume','Run km · '+(lastKr?'last completed week ('+String(lastKr).slice(5)+')':'completed weeks'),(lastC!=null?lastC.toFixed(1)+' km':'—'),chipR,null,null,barsvg(comp.map(function(k){return P(+vv[k].toFixed(1),vv[k].toFixed(1)+' km',k);}),'Weekly running distance — completed weeks only. The dashed bar is the week in progress; it is shown but never counted in the week-over-week chip.',sofar>0?P(+sofar.toFixed(1),sofar.toFixed(1)+' km · pågår',cw):null)+'<div class="axis"><span>this wk so far: '+sofar.toFixed(1)+' km</span><span>aim '+cfg.goals.volume+' km · ramp ≤ +15%/wk</span></div>','Weekly running distance — completed weeks only. The chip tracks week-over-week change, which is what we steer by; '+cfg.goals.volume+' km/wk is the destination, not the weekly signal.');})(),
   (function(){var cw=iso(now);
@@ -1076,7 +1080,7 @@ document.getElementById('engine').innerHTML=[
    var pctM=(lastM!=null&&prevM)?Math.round((lastM/prevM-1)*100):null;
    var sofarM=bv[cw]!=null?bv[cw]:0;
    var gaps=bcomp.reduce(function(a,k){return a+(bmiss[k]||0);},0);
-   var chipM=pctM==null?null:(wkIsDL(bcomp[bcomp.length-1])?{cls:'acc',txt:'deload wk'}:{cls:(pctM>=0?'good':'warn'),txt:(pctM>=0?'+':'')+pctM+'% wk/wk'});
+   var chipM=pctM==null?null:(wkIsDL(bcomp[bcomp.length-1])?dlChip(bcomp[bcomp.length-1]):{cls:(pctM>=0?'good':'warn'),txt:(pctM>=0?'+':'')+pctM+'% wk/wk'});
    var lastK=bcomp.length?bcomp[bcomp.length-1]:null;
    return mpanel('eng','Weekly BikeErg volume','BikeErg metres · '+(lastK?'last completed week ('+String(lastK).slice(5)+')':'completed weeks'),(lastM!=null?fmtN(Math.round(lastM))+'<small> m</small>':'—'),chipM,null,null,
     barsvg(bcomp.map(function(k){return P(Math.round(bv[k]),fmtN(Math.round(bv[k]))+' m',k);}),'Weekly BikeErg metres — completed weeks only. The dashed bar is the week in progress; it is shown but never counted in the week-over-week chip.',sofarM>0?P(Math.round(sofarM),fmtN(Math.round(sofarM))+' m · pågår',cw):null)
@@ -1101,7 +1105,7 @@ document.getElementById('engine').innerHTML=[
    var pct=(lastL!=null&&prevL)?Math.round((lastL/prevL-1)*100):null;
    var sofar=lv[cw]||0,nSofar=ln[cw]||0;
    var tail=lkC.slice(-4),avg4=tail.length?tail.reduce(function(a,k){return a+lv[k];},0)/tail.length:null;
-   var chip=pct==null?null:(wkIsDL(lkC[lkC.length-1])?{cls:'acc',txt:'deload wk'}
+   var chip=pct==null?null:(wkIsDL(lkC[lkC.length-1])?dlChip(lkC[lkC.length-1])
      :((pct>=-10&&pct<=15)?{cls:'good',txt:(pct>=0?'+':'')+pct+'% wk/wk'}:{cls:'warn',txt:(pct>=0?'+':'')+pct+'% wk/wk'}));
    return mpanel('eng','Low-intensity volume','Classified by session goal — not by heart rate · completed weeks',
     (lastL!=null?(lastL/60).toFixed(1)+' h':'—'),chip,null,null,
