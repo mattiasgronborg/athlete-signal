@@ -186,7 +186,7 @@ h2.sl .q{letter-spacing:0;text-transform:none;font-weight:400;opacity:.55;font-s
 // for Mattias och coach Ulrik — och ingen av dem bygger dashboarden. Vad som
 // andrades hor hemma i handoffen, keyat pa numret. Den 29 aug stod hela
 // pass C:s andringslogg har: "omdesign: en kortfabrik med rubrik + chip ...".
-var BUILD="3.38 · 2026-10-06";
+var BUILD="3.39 · 2026-10-06";
 var META=null;   // _meta fran backenden: {schemaVersion, generatedAt, queueLastRun}
 var _SELFTEST=/[?&]selftest=1/.test(location.search);
 var D=null, cfg=null, DAY=86400000, LIVE=false; // no embedded data — dashboard is password-gated, data comes live only
@@ -430,11 +430,11 @@ var CONFIG = {"races": [["2026-09-05", "HybridX · Stockholm"], ["2026-12-11", "
 // MAP är ENDA källan för både adapt() och kolumnkontrollen. En kolumn som inte
 // står här läses inte av något kort; en kolumn som står här MÅSTE finnas i
 // payloaden, annars ritas ett rött varningskort i stället för ett tomt kort.
-var EXPECT_SCHEMA = 19;
+var EXPECT_SCHEMA = 20;
 var MAP = {
   // ALL LOPNING BOR I Running (schema v19). Z4 = troskel, Z5 = VO2 — de fyra sista
   // kolumnerna bar intervallerna. Distans och tid ar HELA passet: volymen MATS.
-  run:    {tab:'Running',   cols:{date:'Date',dist:'Distance (km)',time:'Time (min)',cad:'Cadence (spm)',zone:'Zone',hr:'Avg HR (bpm)',split:'Zone split',struct:'Structure',pacekm:'Pace /km',splits:'Interval splits',incline:'Incline (%)'}},
+  run:    {tab:'Running',   cols:{date:'Date',dist:'Distance (km)',time:'Time (min)',cad:'Cadence (spm)',zone:'Zone',hr:'Avg HR (bpm)',split:'Zone split',struct:'Structure',pacekm:'Pace /km',splits:'Interval splits',incline:'Incline (%)',rest:'Rest (s)'}},
   bike:   {tab:'BikeErg',      cols:{date:'Date',time:'Time (min)',dist:'Distance (km)',bpm:'Avg HR',watt:'Avg watt',zone:'Zone',type:'Type',split:'Zone split',damper:'Damper',drag:'Drag factor'}},
   thr:    {tab:'Threshold', cols:{date:'Date',type:'Type',ints:'Intervals',len:'Length (min/int)',meters:'Total meters',pace:'Avg /500m',pacekm:'Pace /km',watt:'Avg watt',bpm:'Avg HR',split:'Zone split',damper:'Damper',drag:'Drag factor',incline:'Incline (%)',splits:'Interval splits',cad:'Cadence (spm)'}},
   str:    {tab:'Strength',  cols:{date:'Date',dl:'Deadlift (kg)',dlr:'DL reps',fs:'Front squat (kg)',fsr:'FS reps',pr:'Strict press (kg)',prr:'SP reps',bg:'Bulgarian (kg/h)',bgr:'BS reps/leg',bl:'Back lunge (kg/h)',blr:'BL reps/leg',lc:'Leg curl (kg/ben)',lcr:'LC reps',le:'Leg ext (kg/ben)',ler:'LE reps'}},
@@ -651,12 +651,23 @@ function structOf(v){
     return {n:p.length,len:null,key:p.map(function(x){return num(x);}).join('·')};
   return null;
 }
+// VILAN AR EN DEL AV PROTOKOLLET (beslut Mattias 6 okt 2026, schema v20): bara pass
+// med samma intervalltid OCH samma vila jamfors. "90" och "90·90" ar samma vila.
+// Threshold-fliken har ingen vilokolumn — standardprotokollet ar 90 s mellan
+// intervallerna (master §6), en protokollkonstant, sa historiken far den.
+var THR_STD_REST='90';
+function restKey(v){
+  var p=String(v==null?'':v).split(/[\u00b7,;]|\s{2,}/).map(function(x){return x.trim();}).filter(function(x){return x!=='';});
+  if(!p.length) return null;
+  return p.every(function(x){return x===p[0];})?String(+p[0]):p.map(function(x){return String(+x);}).join('·');
+}
+function restTxt(k){return k==null?'rest not logged':k+' s rest';}
 function thrUnion(d){
   var a=(d.thr||[]).map(function(t){var o={};Object.keys(t).forEach(function(k){o[k]=t[k];});
-    o.struct=t.ints+'×'+t.len; o.src='Threshold'; return o;});
+    o.struct=t.ints+'×'+t.len; o.rest=THR_STD_REST; o.src='Threshold'; return o;});
   var b=(d.run||[]).filter(function(r){return /^Z4$/i.test(String(r.zone==null?'':r.zone).trim());})
     .map(function(r){var s=structOf(r.struct); if(!s) return null;
-      return {date:r.date,type:'Run',ints:s.n,len:s.len,struct:s.key,pacekm:r.pacekm,bpm:r.hr,
+      return {date:r.date,type:'Run',ints:s.n,len:s.len,struct:s.key,rest:restKey(r.rest),pacekm:r.pacekm,bpm:r.hr,
               split:r.split,incline:r.incline,splits:r.splits,cad:r.cad,km:num(r.dist),src:'Running'};})
     .filter(function(x){return x;});
   return a.concat(b);
@@ -944,10 +955,13 @@ function renderTrends(w){var c=cut(w);
        // pass med identisk struktur OCH lutning. `M.key` sager vilken kontrollvariabel
        // som ingar i nyckeln; ski behaller sin drag-flagga som forut.
        var lc=num(ls[M.ctrl]);
+       // OCH VILAN (schema v20): samma intervalltid + samma vila, annars ingen trend.
+       var rest=ls.rest==null?null:ls.rest;
        var comp=all.filter(function(t){return (t.struct||(t.ints+'×'+t.len))===struct
+         &&(t.rest==null?null:t.rest)===rest
          &&(!M.key||num(t[M.ctrl])===lc);});
        var cl=num(ls[M.ctrl]),prev=comp.length>=2?comp[comp.length-2]:null,cp=prev?num(prev[M.ctrl]):null;
-       return {key:k,M:M,all:all,comp:comp,last:ls,prev:prev,struct:struct,
+       return {key:k,M:M,all:all,comp:comp,last:ls,prev:prev,struct:struct,rest:rest,
                ctrl:cl,ctrlPrev:cp,ctrlDiff:(cl!=null&&cp!=null&&cl!==cp),
                inPlan:!plan||plan.indexOf(k)>=0,
                order:plan?plan.indexOf(k):0,
@@ -1008,7 +1022,7 @@ function renderTrends(w){var c=cut(w);
    var skipped=b.comp.length-srs.length;
    var notes=[spanTxt(b)];
    if(skipped)notes.push(skipped+' without avg HR — not counted');
-   if(b.dropped)notes.push(b.dropped+' on another '+(b.M.key?'structure or incline':'structure')+' — not plotted');
+   if(b.dropped)notes.push(b.dropped+' with other intervals, rest'+(b.M.key?' or incline':'')+' — not plotted');
    var title='Threshold '+b.M.label+' — output per heartbeat';
    if(!cur) return panel('eng',title,b.struct+(b.ctrl!=null?' · '+b.M.ctrlTxt(b.ctrl):''),
      emptyState('Will show '+b.M.efUnit,
@@ -1022,15 +1036,15 @@ function renderTrends(w){var c=cut(w);
    if(srs.length===1&&b.all.length>b.comp.length){
      var ctl=b.ctrl!=null?' · '+b.M.ctrlTxt(b.ctrl):'';
      return mpanel('eng',title,
-       efRead(b,cur.r)+' at '+Math.round(num(cur.r.bpm))+' bpm · '+b.struct+ctl,
+       efRead(b,cur.r)+' at '+Math.round(num(cur.r.bpm))+' bpm · '+b.struct+' · '+restTxt(b.rest)+ctl,
        cur.v.toFixed(2)+'<small> '+b.M.efUnit+'</small>',{cls:'acc',txt:'varying set-up'},null,null,
        emptyState('Varying set-up — no trend yet',
-         'the next '+b.struct+(b.ctrl!=null?' at '+b.M.ctrlTxt(b.ctrl):'')+' session draws the first line',
+         'the next '+b.struct+' with '+restTxt(b.rest)+(b.ctrl!=null?' at '+b.M.ctrlTxt(b.ctrl):'')+' draws the first line',
          'a trend is only drawn between identical sessions')
        +'<div class="foot-note">'+notes.join(' · ')+'</div>',
-       b.M.label+' threshold output per heartbeat. Only sessions with the same structure'+(b.M.key?' and incline':'')+' are compared; a class with its own set-up counts fully in volume and engine, but is trended only against an identical session.',
+       b.M.label+' threshold output per heartbeat. Only sessions with the same intervals, the same rest'+(b.M.key?' and the same incline':'')+' are compared; a class with its own set-up counts fully in volume and engine, but is trended only against an identical session.',
        '1 session',
-       'No earlier session has the same structure'+(b.M.key?' and incline':'')+', so there is nothing to draw a line to.');
+       'No earlier session has the same intervals and rest'+(b.M.key?' at the same incline':'')+', so there is nothing to draw a line to.');
    }
    var chip;
    if(srs.length>1){
@@ -1039,11 +1053,11 @@ function renderTrends(w){var c=cut(w);
      chip={cls:pct>=0?'good':'acc',txt:(pct>=0?'+':'−')+Math.abs(pct).toFixed(0)+'% vs average'};
    } else chip={cls:'acc',txt:'first measurement'};
    return mpanel('eng',title,
-     efRead(b,cur.r)+' at '+Math.round(num(cur.r.bpm))+' bpm · '+b.struct,
+     efRead(b,cur.r)+' at '+Math.round(num(cur.r.bpm))+' bpm · '+b.struct+' · '+restTxt(b.rest),
      cur.v.toFixed(2)+'<small> '+b.M.efUnit+'</small>',chip,srs,best,
      bspark(srs,best)+refLegend(best,b.M.efUnit)
      +'<div class="foot-note">'+ctrlTag(b)+' · '+notes.join(' · ')+'</div>',
-     b.M.label+' threshold output per heartbeat: '+(b.M.ef==='watt'?'avg watt divided by avg HR':'metres per minute divided by avg HR')+'. Higher is better. Only sessions on the same structure ('+b.struct+') are compared, and the ski number is never read against the run number — different units.',
+     b.M.label+' threshold output per heartbeat: '+(b.M.ef==='watt'?'avg watt divided by avg HR':'metres per minute divided by avg HR')+'. Higher is better. Only sessions with the same intervals and rest ('+b.struct+', '+restTxt(b.rest)+') are compared, and the ski number is never read against the run number — different units.',
      srs.length+(srs.length===1?' session':' sessions'));
  }
  // D1: RADEN RIKTADE SIG TILL INGEN. Den raknade upp SPEC-falten ("Log pace /km ·
